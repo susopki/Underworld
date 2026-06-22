@@ -4,6 +4,7 @@ extends OmniLight3D
 @export var base_energy := 2.4
 @export var random_flicker := true
 var forced_time := 0.0
+var blackout_time := 0.0
 var _next_glitch := 2.0
 
 func _ready() -> void:
@@ -13,7 +14,10 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	_next_glitch -= delta
 	forced_time = maxf(0.0, forced_time - delta)
-	if forced_time > 0.0:
+	blackout_time = maxf(0.0, blackout_time - delta)
+	if blackout_time > 0.0:
+		visible = false
+	elif forced_time > 0.0:
 		visible = randf() > 0.38
 		light_energy = base_energy * randf_range(0.15, 1.2)
 	elif random_flicker and _next_glitch <= 0.0:
@@ -26,4 +30,7 @@ func _process(delta: float) -> void:
 
 func scare_flicker(duration := 3.0) -> void:
 	forced_time = duration
+
+func blackout(duration := 3.0) -> void:
+	blackout_time = maxf(blackout_time, duration)
 

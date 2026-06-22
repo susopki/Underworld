@@ -25,7 +25,11 @@ func _process(delta: float) -> void:
 		3: # A tall shape advances only while far away.
 			if distance > 12.0:
 				global_position = global_position.move_toward(target.global_position, delta * 0.38)
-	if distance < [6.0, 5.0, 7.5, 9.0][biome]:
+		4: # Mall mannequins rotate only when the player looks away.
+			look_at(Vector3(target.global_position.x, global_position.y, target.global_position.z), Vector3.UP)
+		5: # Hanging stairwell shape sways without approaching.
+			rotation.z = sin(Time.get_ticks_msec() * 0.0017) * 0.09
+	if distance < [6.0, 5.0, 7.5, 9.0, 8.0, 7.0][biome]:
 		_disappear()
 
 func _build_entity() -> void:
@@ -51,6 +55,15 @@ func _build_entity() -> void:
 			_add_sphere(Vector3(0.12, 3.3, 0), Vector3(0.3, 0.42, 0.26), black)
 			_add_capsule(Vector3(-0.42, 1.7, 0), Vector3(0.1, 1.35, 0.1), black, Vector3(0, 0, -0.18))
 			_add_capsule(Vector3(0.48, 1.65, 0), Vector3(0.1, 1.45, 0.1), black, Vector3(0, 0, 0.15))
+		4:
+			# Three low-poly mannequins stand too close together.
+			for x in [-0.72, 0.0, 0.72]:
+				_add_capsule(Vector3(x, 0.95, 0), Vector3(0.23, 0.88, 0.2), black)
+				_add_sphere(Vector3(x, 1.92, 0), Vector3(0.2, 0.27, 0.19), black)
+		5:
+			_add_capsule(Vector3(0, 2.95, 0), Vector3(0.28, 1.25, 0.24), black, Vector3(0, 0, 3.14159))
+			_add_sphere(Vector3(0, 1.62, 0), Vector3(0.26, 0.34, 0.23), black)
+			_add_capsule(Vector3(0, 4.78, 0), Vector3(0.055, 0.72, 0.055), black)
 
 func _add_box(pos: Vector3, size: Vector3, material: Material) -> void:
 	var node := MeshInstance3D.new()
@@ -94,4 +107,3 @@ func _disappear() -> void:
 	var tween := create_tween()
 	tween.tween_property(self, "scale", Vector3(0.01, 1.3, 0.01), 0.16)
 	tween.tween_callback(queue_free)
-

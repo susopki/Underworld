@@ -2,8 +2,9 @@ class_name LevelGenerator
 extends Node3D
 
 const ROOM := preload("res://scenes/RoomModule.tscn")
+const BIOME_COUNT := 6
 @export var player_path: NodePath
-@export var room_count := 28
+@export var room_count := 42
 @export var cell_size := 10.0
 
 var current_level := 0
@@ -18,9 +19,9 @@ func _ready() -> void:
 	_generate_level(current_level)
 
 func _generate_level(level_id: int) -> void:
-	current_level = posmod(level_id, 4)
+	current_level = posmod(level_id, BIOME_COUNT)
 	generated_root = Node3D.new()
-	generated_root.name = ["EndlessOffices", "DrownedPoolrooms", "SilentApartments", "UnderpassTunnels"][current_level]
+	generated_root.name = ["YellowOffices", "DrownedHalls", "SilentApartments", "UnderpassTunnels", "DeadMall", "EndlessStairwell"][current_level]
 	add_child(generated_root)
 	_build_layout()
 	var rift_cell := cells[_rng.randi_range(8, cells.size() - 1)] if current_level == 0 else Vector2i(999, 999)
@@ -45,7 +46,7 @@ func _build_layout() -> void:
 		if _rng.randf() < 0.34:
 			cursor = cells[_rng.randi_range(0, cells.size() - 1)]
 		var candidate: Vector2i = cursor + directions[_rng.randi_range(0, 3)]
-		if abs(candidate.x) > 5 or abs(candidate.y) > 5:
+		if abs(candidate.x) > 6 or abs(candidate.y) > 6:
 			continue
 		cursor = candidate
 		if not occupied.has(cursor):
@@ -63,15 +64,16 @@ func _openings_for(cell: Vector2i) -> int:
 func _add_random_portals() -> void:
 	var candidates := cells.duplicate()
 	candidates.sort_custom(func(a: Vector2i, b: Vector2i): return a.length_squared() > b.length_squared())
-	var portal_count := _rng.randi_range(2, 3)
+	# The only exit is deliberately buried in the farthest part of the maze.
+	var portal_count := 1
 	for i in portal_count:
-		var cell: Vector2i = candidates[min(i * 2, candidates.size() - 1)]
-		var target := posmod(current_level + _rng.randi_range(1, 3), 4)
+		var cell: Vector2i = candidates[0]
+		var target := posmod(current_level + _rng.randi_range(1, BIOME_COUNT - 1), BIOME_COUNT)
 		_create_portal(Vector3(cell.x * cell_size, 0, cell.y * cell_size), target)
 
 func _create_portal(where: Vector3, target: int) -> void:
 	var portal := LevelPortal.new()
-	portal.name = "DoorTo_%s" % ["Offices", "Poolrooms", "Apartments", "Tunnels"][target]
+	portal.name = "DoorTo_%s" % ["Offices", "DrownedHalls", "Apartments", "Tunnels", "DeadMall", "Stairwell"][target]
 	portal.target_level = target
 	portal.position = where + Vector3(0, 0, 0)
 	portal.portal_entered.connect(_request_level_switch)
@@ -86,7 +88,7 @@ func _create_portal(where: Vector3, target: int) -> void:
 	black.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	_add_portal_box(portal, Vector3(2.0, 2.8, 0.12), Vector3(0, 1.4, 0), black)
 	var frame := StandardMaterial3D.new()
-	frame.albedo_color = [Color(0.48, 0.42, 0.18), Color(0.2, 0.7, 0.74), Color(0.42, 0.17, 0.12), Color(0.15, 0.24, 0.18)][target]
+	frame.albedo_color = [Color(0.48, 0.42, 0.18), Color(0.2, 0.7, 0.74), Color(0.42, 0.17, 0.12), Color(0.15, 0.24, 0.18), Color(0.42, 0.36, 0.31), Color(0.25, 0.29, 0.34)][target]
 	frame.emission_enabled = true
 	frame.emission = frame.albedo_color
 	frame.emission_energy_multiplier = 2.2
@@ -167,3 +169,25 @@ func flicker_all(duration := 3.0) -> void:
 	for light in get_tree().get_nodes_in_group("liminal_lights"):
 		if light is FlickeringLight:
 			light.scare_flicker(duration)
+
+func blackout_all(duration := 3.0) -> void:
+	for light in get_tree().get_nodes_in_group("liminal_lights"):
+		if light is FlickeringLight:
+			light.blackout(duration)
+
+func light_wave(player: Node3D) -> void:
+	var lights := get_tree().get_nodes_in_group("liminal_lights")
+	lights.sort_custom(func(a: Node3D, b: Node3D): return a.global_position.distance_to(player.global_position) < b.global_position.distance_to(player.global_position))
+	for i in mini(10, lights.size()):
+		var light := lights[i] as FlickeringLight
+		get_tree().create_timer(i * 0.16).timeout.connect(func():
+			if is_instance_valid(light): light.scare_flicker(1.1)
+		)
+
+func spawn_phantom_door(player: Node3D) -> void:
+	var door := PhantomDoor.new()
+	door.target = player
+	generated_root.add_child(door)
+	var spawn := get_entity_spawn_position(player)
+	door.global_position = spawn
+	door.look_at(Vector3(player.global_position.x, door.global_position.y, player.global_position.z), Vector3.UP)

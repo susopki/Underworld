@@ -13,7 +13,7 @@ func _ready() -> void:
 	_build_room()
 
 func _build_room() -> void:
-	room_height = [3.25, 4.1, 3.0, 3.65][biome]
+	room_height = [3.25, 4.1, 3.0, 3.65, 5.2, 5.8][biome]
 	var palette := _palette()
 	_add_box("Floor", Vector3(room_size, 0.18, room_size), Vector3(0, -0.09, 0), palette[1], true)
 	_add_box("Ceiling", Vector3(room_size, 0.16, room_size), Vector3(0, room_height, 0), palette[2], true)
@@ -91,6 +91,18 @@ func _add_biome_geometry(palette: Array[Material]) -> void:
 			_add_box("PipeA", Vector3(0.24, 0.24, 9.4), Vector3(-4.35, 2.75, 0), metal, false)
 			_add_box("PipeB", Vector3(9.4, 0.2, 0.2), Vector3(0, 3.05, 4.25), metal, false)
 			_add_box("ConcreteBeam", Vector3(10, 0.42, 0.48), Vector3(0, 2.92, 0), palette[2], true)
+		4:
+			var shutter := _material(Color(0.11, 0.105, 0.095), 0.55)
+			_add_box("ClosedShop", Vector3(6.2, 3.45, 0.18), Vector3(0.8, 1.72, -3.55), shutter, true)
+			for x in [-1.9, -0.95, 0.0, 0.95, 1.9]:
+				_add_box("ShutterLine", Vector3(0.055, 3.2, 0.24), Vector3(x + 0.8, 1.65, -3.42), palette[2], false)
+			_add_box("MallBench", Vector3(2.6, 0.34, 0.72), Vector3(-2.5, 0.48, 2.2), _material(Color(0.16, 0.09, 0.055), 0.72), true)
+		5:
+			var concrete := palette[0]
+			for step in 7:
+				_add_box("ImpossibleStep", Vector3(3.4, 0.22, 0.72), Vector3(1.7, 0.11 + step * 0.22, 2.6 - step * 0.7), concrete, true)
+			_add_box("StairCore", Vector3(0.34, 4.8, 0.34), Vector3(-2.7, 2.4, -2.5), concrete, true)
+			_add_box("Handrail", Vector3(0.1, 0.1, 5.8), Vector3(3.25, 1.55, 0.2), _material(Color(0.04, 0.045, 0.05), 0.3), false)
 
 func _add_ceiling_rift() -> void:
 	var black := _material(Color(0.0, 0.0, 0.0), 1.0)
@@ -113,8 +125,8 @@ func _add_room_light() -> void:
 	light.add_to_group("liminal_lights")
 	light.position = Vector3(0, room_height - 0.45, 0)
 	light.omni_range = 9.5
-	light.light_color = [Color(1.0, 0.83, 0.47), Color(0.55, 0.88, 0.96), Color(0.72, 0.52, 0.4), Color(0.42, 0.56, 0.47)][biome]
-	light.base_energy = [2.2, 2.7, 1.35, 1.15][biome]
+	light.light_color = [Color(1.0, 0.83, 0.47), Color(0.55, 0.88, 0.96), Color(0.72, 0.52, 0.4), Color(0.42, 0.56, 0.47), Color(0.86, 0.78, 0.62), Color(0.58, 0.66, 0.73)][biome]
+	light.base_energy = [2.2, 2.7, 1.35, 1.15, 1.75, 1.2][biome]
 	light.shadow_enabled = true
 	add_child(light)
 
@@ -123,6 +135,8 @@ func _palette() -> Array[Material]:
 		1: return [_material(Color(0.48, 0.69, 0.67)), _material(Color(0.19, 0.48, 0.52), 0.3), _material(Color(0.73, 0.78, 0.71))]
 		2: return [_material(Color(0.26, 0.15, 0.13)), _material(Color(0.09, 0.045, 0.035)), _material(Color(0.28, 0.23, 0.21))]
 		3: return [_material(Color(0.15, 0.17, 0.16)), _material(Color(0.055, 0.06, 0.055)), _material(Color(0.11, 0.12, 0.11))]
+		4: return [_material(Color(0.31, 0.285, 0.25)), _material(Color(0.18, 0.175, 0.16), 0.38), _material(Color(0.42, 0.4, 0.35))]
+		5: return [_material(Color(0.19, 0.205, 0.21)), _material(Color(0.075, 0.08, 0.085)), _material(Color(0.13, 0.14, 0.15))]
 		_: return [preload("res://materials/wall.tres"), preload("res://materials/floor.tres"), preload("res://materials/ceiling.tres")]
 
 func _material(color: Color, roughness := 0.9) -> StandardMaterial3D:
