@@ -1,0 +1,17 @@
+# Godot generated data
+.godot/
+*.tmp
+
+# Exported builds
+build/
+exports/
+*.exe
+*.apk
+*.pck
+
+# Editor and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+

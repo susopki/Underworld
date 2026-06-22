@@ -1,0 +1,165 @@
+[gd_scene load_steps=14 format=3]
+
+[ext_resource type="Script" path="res://scripts/IntroController.gd" id="1"]
+[ext_resource type="Shader" path="res://shaders/intro_monochrome.gdshader" id="2"]
+[ext_resource type="Material" path="res://materials/cloud_window.tres" id="3"]
+
+[sub_resource type="StandardMaterial3D" id="RoomMaterial"]
+albedo_color = Color(0.42, 0.42, 0.42, 1)
+roughness = 0.82
+
+[sub_resource type="StandardMaterial3D" id="BlackMaterial"]
+albedo_color = Color(0, 0, 0, 1)
+roughness = 1.0
+
+[sub_resource type="StandardMaterial3D" id="GlowMaterial"]
+albedo_color = Color(0.8, 0.8, 0.8, 1)
+emission_enabled = true
+emission = Color(2.5, 2.5, 2.5, 1)
+emission_energy_multiplier = 4.0
+
+[sub_resource type="BoxMesh" id="FloorMesh"]
+material = SubResource("RoomMaterial")
+size = Vector3(12, 0.2, 20)
+
+[sub_resource type="BoxMesh" id="SideWallMesh"]
+material = SubResource("RoomMaterial")
+size = Vector3(0.2, 6, 20)
+
+[sub_resource type="BoxMesh" id="BackWallMesh"]
+material = SubResource("RoomMaterial")
+size = Vector3(12, 6, 0.2)
+
+[sub_resource type="BoxMesh" id="EntranceMesh"]
+material = SubResource("BlackMaterial")
+size = Vector3(3.4, 4.3, 0.32)
+
+[sub_resource type="BoxMesh" id="GlowStripMesh"]
+material = SubResource("GlowMaterial")
+size = Vector3(0.13, 4.7, 0.16)
+
+[sub_resource type="BoxMesh" id="LobbyWindowMesh"]
+material = ExtResource("3")
+size = Vector3(0.05, 2.25, 5.6)
+
+[sub_resource type="ShaderMaterial" id="MonochromeMaterial"]
+shader = ExtResource("2")
+shader_parameter/fade = 0.0
+shader_parameter/proximity = 0.0
+
+[node name="Intro" type="Node3D"]
+script = ExtResource("1")
+
+[node name="Floor" type="MeshInstance3D" parent="."]
+position = Vector3(0, -0.1, 0)
+mesh = SubResource("FloorMesh")
+
+[node name="Ceiling" type="MeshInstance3D" parent="."]
+position = Vector3(0, 5.9, 0)
+mesh = SubResource("FloorMesh")
+
+[node name="LeftWall" type="MeshInstance3D" parent="."]
+position = Vector3(-6, 2.9, 0)
+mesh = SubResource("SideWallMesh")
+
+[node name="RightWall" type="MeshInstance3D" parent="."]
+position = Vector3(6, 2.9, 0)
+mesh = SubResource("SideWallMesh")
+
+[node name="CloudWindowLeftFront" type="MeshInstance3D" parent="."]
+position = Vector3(-5.88, 2.35, 3.4)
+mesh = SubResource("LobbyWindowMesh")
+
+[node name="CloudWindowLeftBack" type="MeshInstance3D" parent="."]
+position = Vector3(-5.88, 2.35, -3.5)
+mesh = SubResource("LobbyWindowMesh")
+
+[node name="CloudWindowRightFront" type="MeshInstance3D" parent="."]
+position = Vector3(5.88, 2.35, 3.4)
+mesh = SubResource("LobbyWindowMesh")
+
+[node name="CloudWindowRightBack" type="MeshInstance3D" parent="."]
+position = Vector3(5.88, 2.35, -3.5)
+mesh = SubResource("LobbyWindowMesh")
+
+[node name="BackWall" type="MeshInstance3D" parent="."]
+position = Vector3(0, 2.9, -10)
+mesh = SubResource("BackWallMesh")
+
+[node name="Entrance" type="MeshInstance3D" parent="."]
+position = Vector3(0, 2.15, -9.86)
+mesh = SubResource("EntranceMesh")
+
+[node name="GlowLeft" type="MeshInstance3D" parent="."]
+position = Vector3(-1.78, 2.15, -9.65)
+mesh = SubResource("GlowStripMesh")
+
+[node name="GlowRight" type="MeshInstance3D" parent="."]
+position = Vector3(1.78, 2.15, -9.65)
+mesh = SubResource("GlowStripMesh")
+
+[node name="GlowTop" type="MeshInstance3D" parent="."]
+position = Vector3(0, 4.48, -9.65)
+rotation = Vector3(0, 0, 1.5708)
+scale = Vector3(1, 0.76, 1)
+mesh = SubResource("GlowStripMesh")
+
+[node name="EntranceLight" type="OmniLight3D" parent="."]
+position = Vector3(0, 2.5, -7.5)
+light_color = Color(0.82, 0.82, 0.82, 1)
+light_energy = 1.5
+omni_range = 9.0
+shadow_enabled = true
+
+[node name="ColdRoomLight" type="DirectionalLight3D" parent="."]
+rotation = Vector3(-0.72, -0.38, 0)
+light_color = Color(0.52, 0.55, 0.59, 1)
+light_energy = 0.42
+shadow_enabled = true
+
+[node name="Camera3D" type="Camera3D" parent="."]
+position = Vector3(0, 2.0, 7.2)
+current = true
+fov = 63.0
+
+[node name="PostProcess" type="CanvasLayer" parent="."]
+layer = 20
+
+[node name="Monochrome" type="ColorRect" parent="PostProcess"]
+material = SubResource("MonochromeMaterial")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Interface" type="CanvasLayer" parent="."]
+layer = 30
+
+[node name="Title" type="Label" parent="Interface"]
+anchors_preset = 10
+anchor_right = 1.0
+offset_top = 74.0
+offset_bottom = 154.0
+grow_horizontal = 2
+theme_override_colors/font_color = Color(0.9, 0.9, 0.9, 1)
+theme_override_colors/font_shadow_color = Color(1, 1, 1, 0.26)
+theme_override_constants/shadow_offset_x = 0
+theme_override_constants/shadow_offset_y = 0
+theme_override_font_sizes/font_size = 48
+text = "U N D E R W O R L D"
+horizontal_alignment = 1
+
+[node name="Prompt" type="Label" parent="Interface"]
+anchors_preset = 12
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -104.0
+offset_bottom = -58.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.88, 0.88, 0.88, 1)
+theme_override_font_sizes/font_size = 20
+text = "НАЖМИТЕ ЛЮБУЮ КНОПКУ, ЧТОБЫ ПРОДОЛЖИТЬ"
+horizontal_alignment = 1
