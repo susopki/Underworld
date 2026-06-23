@@ -1,6 +1,8 @@
 class_name ScareEventManager
 extends Node
 
+const EVENT_COUNT := 22
+
 @export var player_path: NodePath
 @export var level_path: NodePath
 @export var sound_path: NodePath
@@ -26,12 +28,12 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	_timer -= delta
 	if _timer <= 0.0:
-		var next_event := _rng.randi_range(0, 13)
+		var next_event := _rng.randi_range(0, EVENT_COUNT - 1)
 		while next_event == _last_event:
-			next_event = _rng.randi_range(0, 13)
+			next_event = _rng.randi_range(0, EVENT_COUNT - 1)
 		_last_event = next_event
 		_run_event(next_event)
-		_timer = _rng.randf_range(28.0, 58.0)
+		_timer = _rng.randf_range(24.0, 52.0)
 	# Invisible anomaly bands recur deep in the architecture.
 	var radial_distance := Vector2(player.global_position.x, player.global_position.z).length()
 	var band := int(floor(radial_distance / 42.0))
@@ -83,16 +85,72 @@ func _run_event(event_id: int) -> void:
 			level.spawn_phantom_door(player)
 			atmosphere.pulse_anomaly(0.78)
 		13:
-			_spawn_shadow()
+			_spawn_shadow(0)
 			atmosphere.fog_surge(0.55, 3.5)
+		14:
+			_spawn_shadow(1, true)
+			sounds.play_reverse_hit()
+			atmosphere.pulse_anomaly(0.92)
+		15:
+			_spawn_shadow_family()
+			sounds.play_phantom_chord()
+			level.flicker_all(1.8)
+		16:
+			_spawn_shadow(2, false, 5.2)
+			sounds.play_close_knock()
+			atmosphere.pulse_anomaly(0.68)
+		17:
+			sounds.play_low_drone(5.5)
+			atmosphere.fog_surge(1.15, 5.0)
+			get_tree().create_timer(1.0).timeout.connect(func(): _spawn_shadow(3, true))
+		18:
+			level.blackout_all(2.2)
+			sounds.play_reverse_hit()
+			get_tree().create_timer(0.55).timeout.connect(func(): _spawn_shadow(4, true, 9.0))
+		19:
+			level.light_wave(player)
+			sounds.play_ceiling_crawl()
+			_spawn_shadow(5, false, 11.0)
+		20:
+			sounds.play_wall_breath(true)
+			atmosphere.pulse_anomaly(1.0)
+			get_tree().create_timer(0.45).timeout.connect(func(): _spawn_shadow(6, false, 4.6))
+		21:
+			level.spawn_phantom_door(player)
+			_spawn_shadow(7, true, 13.0)
+			sounds.silence_hum(4.2)
 
-func _spawn_shadow() -> void:
+func _spawn_shadow(entity_variant := 0, in_front := false, forced_distance := -1.0) -> void:
 	if get_tree().get_first_node_in_group("shadow_entity"):
 		return
 	var entity := BiomeEntity.new()
 	entity.biome = level.current_level
+	entity.entity_variant = entity_variant
 	entity.target = player
 	entity.add_to_group("shadow_entity")
 	level.get_parent().add_child(entity)
-	entity.global_position = level.get_entity_spawn_position(player)
+	if in_front or forced_distance > 0.0:
+		var forward := -player.global_transform.basis.z.normalized()
+		var right := player.global_transform.basis.x.normalized()
+		var distance := forced_distance if forced_distance > 0.0 else _rng.randf_range(10.0, 18.0)
+		entity.global_position = player.global_position + forward * distance + right * _rng.randf_range(-2.2, 2.2)
+	else:
+		entity.global_position = level.get_entity_spawn_position(player)
+	entity.look_at(Vector3(player.global_position.x, entity.global_position.y, player.global_position.z), Vector3.UP)
 	atmosphere.pulse_anomaly(0.32)
+
+func _spawn_shadow_family() -> void:
+	if get_tree().get_first_node_in_group("shadow_entity"):
+		return
+	var forward := -player.global_transform.basis.z.normalized()
+	var right := player.global_transform.basis.x.normalized()
+	for i in range(4):
+		var entity := BiomeEntity.new()
+		entity.biome = level.current_level
+		entity.entity_variant = 10 + i
+		entity.target = player
+		entity.add_to_group("shadow_entity")
+		level.get_parent().add_child(entity)
+		entity.global_position = player.global_position + forward * (12.5 + float(i) * 1.2) + right * (-2.4 + float(i) * 1.6)
+		entity.look_at(Vector3(player.global_position.x, entity.global_position.y, player.global_position.z), Vector3.UP)
+	atmosphere.pulse_anomaly(0.86)

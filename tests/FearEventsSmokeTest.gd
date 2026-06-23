@@ -10,8 +10,8 @@ func _run() -> void:
 	await process_frame
 	await process_frame
 	var manager := scene.get_node("ScareEventManager") as ScareEventManager
-	for event_id in 14:
+	for event_id in ScareEventManager.EVENT_COUNT:
 		manager._run_event(event_id)
 		await process_frame
-	print("Fear director: 14 events executed")
+	print("Fear director: %d events executed" % ScareEventManager.EVENT_COUNT)
 	quit()

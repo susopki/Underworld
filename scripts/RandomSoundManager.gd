@@ -59,21 +59,26 @@ func _update_player_steps(delta: float) -> void:
 func _play_biome_event() -> void:
 	match current_biome:
 		0: # Office: ballast pops and impossible footsteps.
-			if _rng.randf() < 0.55: play_electrical_pop()
+			if _rng.randf() < 0.45: play_electrical_pop()
+			elif _rng.randf() < 0.72: play_close_knock()
 			else: play_distant_steps()
 		1: # Drowned halls: isolated drops in a tiled infinity.
-			_play_3d(_make_tonal_event(4), _random_distant_position(), -12.0)
+			if _rng.randf() < 0.55: _play_3d(_make_tonal_event(4), _random_distant_position(), -10.0)
+			else: play_low_drone(4.0)
 		2: # Apartments: knocks and breathing through walls.
-			if _rng.randf() < 0.5: _play_3d(_make_tonal_event(5), _random_distant_position(), -9.0)
-			else: play_wall_breath()
+			if _rng.randf() < 0.48: play_close_knock()
+			else: play_wall_breath(_rng.randf() < 0.35)
 		3: # Tunnel: metal movement and ceiling scrape.
-			if _rng.randf() < 0.5: play_metal_slam()
+			if _rng.randf() < 0.38: play_metal_slam()
+			elif _rng.randf() < 0.68: play_ceiling_crawl()
 			else: play_ceiling_scrape()
 		4: # Mall: voices lost in a huge empty volume.
-			if _rng.randf() < 0.55: play_whisper()
+			if _rng.randf() < 0.38: play_whisper()
+			elif _rng.randf() < 0.68: play_phantom_chord()
 			else: play_distant_steps()
 		5: # Stairwell: scraping above or steps on another flight.
-			if _rng.randf() < 0.5: play_ceiling_scrape()
+			if _rng.randf() < 0.45: play_ceiling_scrape()
+			elif _rng.randf() < 0.72: play_reverse_hit()
 			else: play_distant_steps()
 
 func play_distant_steps() -> void:
@@ -81,9 +86,10 @@ func play_distant_steps() -> void:
 	var where := player.global_position + player.global_transform.basis.z * _rng.randf_range(8.0, 18.0) + Vector3(side * 2.2, 0.3, 0)
 	_play_3d(_make_steps(), where, -18.0)
 
-func play_wall_breath() -> void:
+func play_wall_breath(close := false) -> void:
 	var side := -1.0 if _rng.randf() < 0.5 else 1.0
-	_play_3d(_make_noise(2.8, 0.07, 91), player.global_position + Vector3(side * 2.8, 1.3, -2.0), -13.0)
+	var distance := 1.35 if close else 2.8
+	_play_3d(_make_breath_stack(3.4 if close else 2.8), player.global_position + Vector3(side * distance, 1.3, -1.1), -8.0 if close else -13.0)
 
 func play_metal_slam() -> void:
 	_play_3d(_make_tonal_event(0), _random_distant_position(), -5.0)
@@ -97,6 +103,22 @@ func play_whisper() -> void:
 
 func play_electrical_pop() -> void:
 	_play_3d(_make_tonal_event(3), _random_distant_position(), -8.0)
+
+func play_reverse_hit() -> void:
+	_play_3d(_make_reverse_impact(), player.global_position + Vector3(randf_range(-1.6, 1.6), 1.6, randf_range(-2.4, 2.4)), -7.0)
+
+func play_low_drone(duration := 5.0) -> void:
+	_play_3d(_make_low_drone(duration), _random_distant_position(), -12.0)
+
+func play_close_knock() -> void:
+	var side := -1.0 if _rng.randf() < 0.5 else 1.0
+	_play_3d(_make_knock_pattern(), player.global_position + Vector3(side * _rng.randf_range(1.4, 2.4), 1.05, _rng.randf_range(-0.8, 1.6)), -10.0)
+
+func play_ceiling_crawl() -> void:
+	_play_3d(_make_ceiling_crawl(), player.global_position + Vector3(randf_range(-2.8, 2.8), 2.9, randf_range(-3.2, 3.2)), -8.0)
+
+func play_phantom_chord() -> void:
+	_play_3d(_make_phantom_chord(), _random_distant_position(), -11.0)
 
 func silence_hum(duration := 5.0) -> void:
 	if not _ambience_player:
@@ -126,12 +148,12 @@ func _make_biome_ambience(biome: int) -> AudioStreamWAV:
 		match biome:
 			0:
 				var flutter := 0.72 + 0.28 * sin(TAU * 0.37 * t) * sin(TAU * 1.9 * t)
-				value = sin(TAU * 50.0 * t) * 0.44 + sin(TAU * 100.0 * t) * 0.15 + sin(TAU * 2360.0 * t) * 0.025 * flutter
+				value = sin(TAU * 49.0 * t) * 0.42 + sin(TAU * 98.0 * t) * 0.16 + sin(TAU * 2360.0 * t) * 0.018 * flutter + filtered * 0.08
 			1:
-				value = sin(TAU * 34.0 * t) * 0.2 + filtered * 0.34 + sin(TAU * 0.46 * t) * sin(TAU * 72.0 * t) * 0.12
+				value = sin(TAU * 31.0 * t) * 0.24 + filtered * 0.38 + sin(TAU * 0.46 * t) * sin(TAU * 72.0 * t) * 0.12
 			2:
 				var pipe_ring := exp(-fmod(t, 2.73) * 13.0) * sin(TAU * 410.0 * t)
-				value = sin(TAU * 58.0 * t) * 0.2 + sin(TAU * 116.0 * t) * 0.06 + pipe_ring * 0.08 + filtered * 0.08
+				value = sin(TAU * 54.0 * t) * 0.18 + sin(TAU * 111.0 * t) * 0.06 + pipe_ring * 0.1 + filtered * 0.12
 			3:
 				value = sin(TAU * 27.0 * t) * 0.34 + sin(TAU * 41.0 * t) * 0.13 + filtered * (0.3 + sin(TAU * 0.17 * t) * 0.12)
 			4:
@@ -213,7 +235,7 @@ func _decay_after(time_value: float, start: float, decay: float) -> float:
 
 func _make_tonal_event(kind: int) -> AudioStreamWAV:
 	var rate := 22050
-	var seconds: float = [1.5, 4.2, 2.7, 0.7, 1.4, 1.8][kind]
+	var seconds: float = [1.8, 4.8, 3.2, 0.9, 1.7, 2.0][kind]
 	var count := int(rate * seconds)
 	var data := PackedByteArray()
 	data.resize(count * 2)
@@ -224,21 +246,124 @@ func _make_tonal_event(kind: int) -> AudioStreamWAV:
 		var t := float(i) / rate
 		var value := 0.0
 		match kind:
-			0: value = (sin(TAU * 47.0 * t) + rng.randf_range(-0.7, 0.7)) * exp(-t * 4.8)
+			0: value = (sin(TAU * 43.0 * t) * 1.1 + sin(TAU * 61.0 * t) * 0.55 + rng.randf_range(-0.7, 0.7)) * exp(-t * 3.8)
 			1:
 				filtered = lerpf(filtered, rng.randf_range(-1.0, 1.0), 0.025)
-				value = filtered * sin(TAU * (620.0 + sin(t * 3.0) * 140.0) * t) * sin(PI * t / seconds)
+				value = filtered * sin(TAU * (480.0 + sin(t * 3.0) * 220.0) * t) * sin(PI * t / seconds)
 			2:
 				filtered = lerpf(filtered, rng.randf_range(-1.0, 1.0), 0.055)
-				value = filtered * (0.35 + 0.65 * sin(TAU * 3.7 * t)) * sin(PI * t / seconds)
-			3: value = rng.randf_range(-1.0, 1.0) * exp(-t * 18.0) + sin(TAU * 1100.0 * t) * exp(-t * 11.0)
+				value = filtered * (0.25 + 0.75 * sin(TAU * 2.7 * t)) * sin(PI * t / seconds) + sin(TAU * 127.0 * t) * 0.08
+			3: value = rng.randf_range(-1.0, 1.0) * exp(-t * 22.0) + sin(TAU * 940.0 * t) * exp(-t * 14.0)
 			4:
-				value = sin(TAU * (920.0 - t * 380.0) * t) * exp(-t * 14.0)
-				if t > 0.23: value += sin(TAU * 690.0 * (t - 0.23)) * exp(-(t - 0.23) * 12.0) * 0.35
+				value = sin(TAU * (720.0 - t * 310.0) * t) * exp(-t * 10.0)
+				if t > 0.23: value += sin(TAU * 390.0 * (t - 0.23)) * exp(-(t - 0.23) * 9.0) * 0.45
 			5:
-				value = sin(TAU * 74.0 * t) * exp(-t * 22.0)
-				if t > 0.62: value += sin(TAU * 68.0 * (t - 0.62)) * exp(-(t - 0.62) * 20.0) * 0.48
-		data.encode_s16(i * 2, int(clampf(value * 0.68, -1.0, 1.0) * 19000.0))
+				value = sin(TAU * 68.0 * t) * exp(-t * 18.0)
+				if t > 0.62: value += sin(TAU * 59.0 * (t - 0.62)) * exp(-(t - 0.62) * 16.0) * 0.58
+		data.encode_s16(i * 2, int(clampf(value * 0.78, -1.0, 1.0) * 21000.0))
+	return _wav(data, rate, false)
+
+func _make_reverse_impact() -> AudioStreamWAV:
+	var rate := 22050
+	var seconds := 2.2
+	var count := int(rate * seconds)
+	var data := PackedByteArray()
+	data.resize(count * 2)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = _rng.randi()
+	for i in count:
+		var t := float(i) / rate
+		var rise := smoothstep(0.0, 1.0, t / 1.45)
+		var hit := exp(-abs(t - 1.48) * 24.0)
+		var tail := exp(maxf(0.0, t - 1.48) * -2.6)
+		var value := sin(TAU * (38.0 + rise * 92.0) * t) * rise * 0.55
+		value += rng.randf_range(-1.0, 1.0) * (rise * 0.18 + hit * 0.8) * tail
+		value += sin(TAU * 27.0 * t) * hit * 1.1
+		data.encode_s16(i * 2, int(clampf(value, -1.0, 1.0) * 22000.0))
+	return _wav(data, rate, false)
+
+func _make_low_drone(seconds: float) -> AudioStreamWAV:
+	var rate := 22050
+	var count := int(rate * seconds)
+	var data := PackedByteArray()
+	data.resize(count * 2)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = _rng.randi()
+	var filtered := 0.0
+	for i in count:
+		var t := float(i) / rate
+		filtered = lerpf(filtered, rng.randf_range(-1.0, 1.0), 0.01)
+		var envelope := sin(PI * t / seconds)
+		var value := (sin(TAU * 23.0 * t) * 0.55 + sin(TAU * 31.0 * t + sin(t)) * 0.35 + filtered * 0.24) * envelope
+		data.encode_s16(i * 2, int(clampf(value, -1.0, 1.0) * 19000.0))
+	return _wav(data, rate, false)
+
+func _make_knock_pattern() -> AudioStreamWAV:
+	var rate := 22050
+	var seconds := 2.1
+	var count := int(rate * seconds)
+	var data := PackedByteArray()
+	data.resize(count * 2)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = _rng.randi()
+	var hits: Array[float] = [0.05, 0.31, 0.86, 0.95, 1.54]
+	for i in count:
+		var t := float(i) / rate
+		var envelope := 0.0
+		for hit in hits:
+			envelope += exp(-abs(t - hit) * 42.0)
+		var value := (sin(TAU * 84.0 * t) * 0.72 + rng.randf_range(-0.3, 0.3)) * envelope
+		data.encode_s16(i * 2, int(clampf(value, -1.0, 1.0) * 16000.0))
+	return _wav(data, rate, false)
+
+func _make_ceiling_crawl() -> AudioStreamWAV:
+	var rate := 22050
+	var seconds := 4.0
+	var count := int(rate * seconds)
+	var data := PackedByteArray()
+	data.resize(count * 2)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = _rng.randi()
+	for i in count:
+		var t := float(i) / rate
+		var scrape: float = abs(sin(TAU * 4.2 * t + sin(t * 3.0))) * 0.45
+		var pulse: float = exp(-fmod(t, 0.42) * 16.0)
+		var value: float = rng.randf_range(-1.0, 1.0) * scrape * pulse + sin(TAU * 190.0 * t) * pulse * 0.18
+		data.encode_s16(i * 2, int(clampf(value, -1.0, 1.0) * 17000.0))
+	return _wav(data, rate, false)
+
+func _make_phantom_chord() -> AudioStreamWAV:
+	var rate := 22050
+	var seconds := 3.6
+	var count := int(rate * seconds)
+	var data := PackedByteArray()
+	data.resize(count * 2)
+	var freqs: Array[float] = [53.0, 58.4, 91.0, 137.0]
+	for i in count:
+		var t := float(i) / rate
+		var envelope := sin(PI * t / seconds)
+		var value := 0.0
+		for f in freqs:
+			value += sin(TAU * (f + sin(t * 0.8) * 1.7) * t) * 0.18
+		value *= envelope
+		data.encode_s16(i * 2, int(clampf(value, -1.0, 1.0) * 18000.0))
+	return _wav(data, rate, false)
+
+func _make_breath_stack(seconds: float) -> AudioStreamWAV:
+	var rate := 22050
+	var count := int(rate * seconds)
+	var data := PackedByteArray()
+	data.resize(count * 2)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 913 + _rng.randi()
+	var filtered := 0.0
+	for i in count:
+		var t := float(i) / rate
+		filtered = lerpf(filtered, rng.randf_range(-1.0, 1.0), 0.055)
+		var inhale := pow(maxf(0.0, sin(TAU * 0.42 * t)), 2.0)
+		var throat := sin(TAU * 72.0 * t + filtered * 0.3) * 0.16
+		var value := filtered * inhale * 0.72 + throat * inhale
+		data.encode_s16(i * 2, int(clampf(value, -1.0, 1.0) * 18500.0))
 	return _wav(data, rate, false)
 
 func _make_noise(seconds: float, smooth: float, seed_value: int) -> AudioStreamWAV:

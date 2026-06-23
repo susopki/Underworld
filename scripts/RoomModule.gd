@@ -26,6 +26,7 @@ func _build_room() -> void:
 	_add_depth_cues(palette)
 	_add_biome_geometry(palette)
 	_add_uncanny_props(palette)
+	_add_unstable_architecture(palette)
 	_add_room_light()
 	if biome == 0 and ceiling_rift:
 		_add_ceiling_rift()
@@ -189,6 +190,25 @@ func _add_uncanny_props(palette: Array[Material]) -> void:
 			_add_box("WrongFloorNumber", Vector3(0.58, 0.42, 0.04), Vector3(-4.88, 2.15, 0.9), red_dim if posmod(seed, 5) == 0 else dark, false)
 			if posmod(seed, 3) == 2:
 				_add_box("VerticalVoidSlit", Vector3(0.05, 3.4, 0.55), Vector3(4.88, 1.9, -2.4), dark, false)
+
+func _add_unstable_architecture(palette: Array[Material]) -> void:
+	var seed: int = absi(grid_coord.x * 313 + grid_coord.y * 701 + biome * 997)
+	var black := _material(Color(0.0, 0.0, 0.0, 0.62), 1.0)
+	black.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	if posmod(seed, 4) == 0:
+		var panel := _add_box("LeaningFalseWall", Vector3(0.16, room_height * 0.72, 3.2), Vector3(-3.55, room_height * 0.36, 1.1), palette[0], true)
+		panel.rotation_degrees.z = -4.0 - float(posmod(seed, 5))
+	if posmod(seed, 5) == 1:
+		var ceiling_sag := _add_box("SaggingCeilingMass", Vector3(4.2, 0.48, 2.2), Vector3(1.2, room_height - 0.38, -1.8), palette[2], false)
+		ceiling_sag.rotation_degrees.x = 3.0
+	if posmod(seed, 6) == 2:
+		_add_box("ImpossibleBlackGap", Vector3(2.3, 0.035, 0.08), Vector3(-1.1, 0.05, 4.86), black, false)
+	if biome == 4 and posmod(seed, 3) == 0:
+		var tilted_shop := _add_box("TiltedShopFacade", Vector3(3.8, 2.7, 0.16), Vector3(-2.2, 1.35, 4.72), palette[0], true)
+		tilted_shop.rotation_degrees.z = 2.8
+	if biome == 5 and posmod(seed, 2) == 0:
+		var wrong_rail := _add_box("RailThatBlocksSight", Vector3(0.11, 0.11, 7.8), Vector3(-3.7, 1.25, 0), black, false)
+		wrong_rail.rotation_degrees.x = 8.0
 
 func _add_biome_geometry(palette: Array[Material]) -> void:
 	var variant := posmod(grid_coord.x * 31 + grid_coord.y * 17, 4)
