@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "godot": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "gopeak@2.3.8"
+      ],
+      "env": {
+        "GODOT_PATH": "/usr/bin/godot",
+        "GOPEAK_TOOL_PROFILE": "compact",
+        "GODOT_PROJECT_PATH": "/home/tux/Underworld"
+      }
+    }
+  }
+}
