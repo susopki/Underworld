@@ -12,6 +12,7 @@
 shader = ExtResource("7")
 shader_parameter/intensity = 0.55
 shader_parameter/anomaly = 0.0
+shader_parameter/breathing_noise = 0.0
 shader_parameter/grain_amount = 0.055
 shader_parameter/chromatic = 0.002
 
