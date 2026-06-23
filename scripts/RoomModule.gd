@@ -474,33 +474,22 @@ func _add_biome_geometry(palette: Array[Material]) -> void:
 				_add_box("WallCabinet", Vector3(5.0, 0.85, 0.45), Vector3(0.3, 2.2, -4.2), counter_mat, true)
 				_add_box("CabinetUnderline", Vector3(5.2, 0.03, 0.48), Vector3(0.3, 1.78, -4.18), _material(Color(0.02, 0.02, 0.02), 0.9), false)
 		1:
+			# Drowned Halls: water covers every room (shallow wading level).
+			_add_water("Water", room_size - 0.2, room_size - 0.2, 0.14)
 			if variant == 0:
-				_add_water("PoolWater", 8.8, 8.8, 0.1)
 				for corner in [Vector3(-3.8, 1.8, -3.8), Vector3(3.8, 1.8, -3.8), Vector3(-3.8, 1.8, 3.8), Vector3(3.8, 1.8, 3.8)]:
 					_add_box("PoolColumn", Vector3(0.52, 3.6, 0.52), corner, palette[0], true)
 			elif variant == 1:
-				_add_water("PoolWater", 8.8, 8.8, 0.1)
-				_add_box("PoolBridge", Vector3(2.2, 0.18, 8.7), Vector3(-2.7, 0.12, 0), palette[1], true)
+				_add_box("PoolBridge", Vector3(2.2, 0.26, 8.7), Vector3(-2.7, 0.13, 0), palette[1], true)
 			elif variant == 2:
-				_add_water("PoolWater", 5.2, 8.8, 0.1)
-				_add_box("DryIsland", Vector3(3.5, 0.24, 3.5), Vector3(2.3, 0.12, -1.8), palette[1], true)
+				_add_box("DryIsland", Vector3(3.5, 0.28, 3.5), Vector3(2.3, 0.14, -1.8), palette[1], true)
 			elif variant == 3:
-				_add_water("PoolWater", 8.8, 8.8, 0.1)
 				_add_box("LowPoolArch", Vector3(8.5, 0.52, 0.5), Vector3(0, 3.15, 0), palette[0], true)
 			elif variant == 4:
-				# Empty drained pool: cracked floor, no water
-				var crack := _material(Color(0.04, 0.04, 0.04, 0.7), 1.0)
-				crack.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-				_add_box("PoolBasin", Vector3(7.8, 0.35, 7.8), Vector3(0, -0.17, 0), palette[1], true)
-				for i in 5:
-					var cx := -2.0 + i * 1.0
-					_add_box("FloorCrack", Vector3(0.04, 0.025, 2.2 + i * 0.3), Vector3(cx, 0.015, float(i) * 0.5 - 1.0), crack, false)
-				# Pool depth markings (ghost of former use)
+				# Depth markings (ghost of former use) line the wall
 				var mark := _emissive_material(Color(0.25, 0.55, 0.7), 0.2)
 				_add_box("DepthMark1m", Vector3(0.6, 0.04, 0.08), Vector3(-3.7, 0.65, 0.0), mark, false)
 			else:
-				# Flooded: single water surface at 0.6m — feels like you're wading
-				_add_water("FloodWater", 9.6, 9.6, 0.6)
 				for cx in [-3.5, 3.5]:
 					_add_box("FloodColumn", Vector3(0.42, 0.6, 0.42), Vector3(cx, 0.3, 0.0), palette[0], true)
 		2:

@@ -41,7 +41,11 @@ func _update_player_steps(delta: float) -> void:
 	if player.horizontal_speed() > 0.35 and player.is_on_floor():
 		_player_step_timer -= delta
 		if _player_step_timer <= 0.0:
-			_play_3d(_make_single_step(), player.global_position + Vector3(0, 0.08, 0), -30.0)
+			if current_biome == 1:
+				_play_3d(_make_splash(), player.global_position + Vector3(0, 0.08, 0), -15.0)
+				_spawn_splash(player.global_position)
+			else:
+				_play_3d(_make_single_step(), player.global_position + Vector3(0, 0.08, 0), -30.0)
 			_player_step_timer = 0.58
 	else:
 		_player_step_timer = minf(_player_step_timer, 0.12)
@@ -170,6 +174,53 @@ func _make_steps() -> AudioStreamWAV:
 		var envelope := _step_pulse(t, 0.78) + _step_pulse(t - 0.19, 0.78) * 0.42 + _step_pulse(t - 0.43, 0.78) * 0.2
 		var value := (sin(TAU * 62.0 * t) + rng.randf_range(-0.35, 0.35)) * envelope * 0.6
 		data.encode_s16(i * 2, int(clampf(value, -1.0, 1.0) * 10500.0))
+	return _wav(data, rate, false)
+
+func _spawn_splash(pos: Vector3) -> void:
+	var p := CPUParticles3D.new()
+	p.name = "Splash"
+	p.one_shot = true
+	p.emitting = true
+	p.amount = 10
+	p.lifetime = 0.5
+	p.explosiveness = 0.9
+	p.direction = Vector3.UP
+	p.spread = 38.0
+	p.initial_velocity_min = 1.1
+	p.initial_velocity_max = 2.4
+	p.gravity = Vector3(0, -6.5, 0)
+	p.scale_amount_min = 0.02
+	p.scale_amount_max = 0.05
+	var mesh := SphereMesh.new()
+	mesh.radius = 0.03
+	mesh.height = 0.06
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.55, 0.72, 0.8, 0.7)
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.emission_enabled = true
+	mat.emission = Color(0.3, 0.5, 0.58)
+	mat.emission_energy_multiplier = 0.4
+	mesh.material = mat
+	p.mesh = mesh
+	add_child(p)
+	p.global_position = pos + Vector3(0, 0.06, 0)
+	get_tree().create_timer(0.9).timeout.connect(p.queue_free)
+
+func _make_splash() -> AudioStreamWAV:
+	var rate := 22050
+	var seconds := 0.5
+	var count := int(rate * seconds)
+	var data := PackedByteArray()
+	data.resize(count * 2)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = _rng.randi()
+	var filtered := 0.0
+	for i in count:
+		var t := float(i) / rate
+		filtered = lerpf(filtered, rng.randf_range(-1.0, 1.0), 0.35)
+		var env := exp(-t * 11.0) + exp(-t * 45.0) * 0.6
+		var value := filtered * env * 0.9 + sin(TAU * 95.0 * t) * exp(-t * 20.0) * 0.3
+		data.encode_s16(i * 2, int(clampf(value, -1.0, 1.0) * 15000.0))
 	return _wav(data, rate, false)
 
 func _make_single_step() -> AudioStreamWAV:

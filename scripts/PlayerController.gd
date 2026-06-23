@@ -5,6 +5,7 @@ extends CharacterBody3D
 @export var acceleration := 7.0
 @export var mouse_sensitivity := 0.0018
 @export var gravity := 18.0
+const STEP_HEIGHT := 0.30
 @onready var head: Node3D = $Head
 
 var _pitch := 0.0
@@ -21,6 +22,8 @@ func set_noclip(enabled: bool) -> void:
 
 func _ready() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	# Snap back down onto step tops after stepping up.
+	floor_snap_length = STEP_HEIGHT + 0.1
 	_head_rest_y = head.position.y
 	_build_eyelids()
 	_build_flashlight()
@@ -99,7 +102,26 @@ func _physics_process(delta: float) -> void:
 	velocity.x = move_toward(velocity.x, target.x, acceleration * delta)
 	velocity.z = move_toward(velocity.z, target.z, acceleration * delta)
 	velocity.y = 0.0 if is_on_floor() else velocity.y - gravity * delta
+	_try_step_up(delta)
 	move_and_slide()
+
+## Let the player walk over ledges up to STEP_HEIGHT without stopping.
+func _try_step_up(delta: float) -> void:
+	if not is_on_floor():
+		return
+	var motion := Vector3(velocity.x, 0.0, velocity.z) * delta
+	if motion.length() < 0.0001:
+		return
+	# Not blocked at foot level → no step needed.
+	if not test_move(global_transform, motion):
+		return
+	var up := Vector3.UP * STEP_HEIGHT
+	# Headroom to lift, and path clear once raised → it's a climbable step, not a wall.
+	if test_move(global_transform, up):
+		return
+	if test_move(global_transform.translated(up), motion):
+		return
+	global_position += up
 
 func _fly(delta: float) -> void:
 	velocity = Vector3.ZERO
