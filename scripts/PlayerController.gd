@@ -8,12 +8,56 @@ extends CharacterBody3D
 @onready var head: Node3D = $Head
 
 var _pitch := 0.0
+var noclip := false
+var fly_speed := 8.0
+var _knocked := false
+var _head_rest_y := 1.58
+var _eyelids: ColorRect
+
+func set_noclip(enabled: bool) -> void:
+	noclip = enabled
+	$CollisionShape3D.set_deferred("disabled", enabled)
 
 func _ready() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	_head_rest_y = head.position.y
+	_build_eyelids()
 	_add_breathing()
 
+func _build_eyelids() -> void:
+	var layer := CanvasLayer.new()
+	layer.layer = 60
+	add_child(layer)
+	_eyelids = ColorRect.new()
+	_eyelids.color = Color(0, 0, 0, 0)
+	_eyelids.anchor_right = 1.0
+	_eyelids.anchor_bottom = 1.0
+	_eyelids.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(_eyelids)
+
+## Player gets knocked to the floor, eyes close (black), then comes to after black_time.
+func knock_down(black_time := 10.0) -> void:
+	if _knocked:
+		return
+	_knocked = true
+	velocity = Vector3.ZERO
+	var fall := create_tween()
+	fall.set_parallel(true)
+	fall.tween_property(head, "position:y", 0.22, 0.55).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	fall.tween_property(head, "rotation:z", deg_to_rad(72.0), 0.7).set_trans(Tween.TRANS_BACK)
+	fall.tween_property(_eyelids, "color:a", 1.0, 0.85).set_delay(0.35)
+	await get_tree().create_timer(0.85 + black_time).timeout
+	var wake := create_tween()
+	wake.set_parallel(true)
+	wake.tween_property(_eyelids, "color:a", 0.0, 1.4)
+	wake.tween_property(head, "position:y", _head_rest_y, 0.9).set_trans(Tween.TRANS_SINE)
+	wake.tween_property(head, "rotation:z", 0.0, 0.9).set_trans(Tween.TRANS_SINE)
+	await wake.finished
+	_knocked = false
+
 func _input(event: InputEvent) -> void:
+	if _knocked:
+		return
 	if event is InputEventMouseButton and event.pressed:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
@@ -24,6 +68,12 @@ func _input(event: InputEvent) -> void:
 		get_tree().quit()
 
 func _physics_process(delta: float) -> void:
+	if _knocked:
+		velocity = Vector3.ZERO
+		return
+	if noclip:
+		_fly(delta)
+		return
 	var input := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 	var direction := (transform.basis * Vector3(input.x, 0.0, input.y)).normalized()
 	var target := direction * walk_speed
@@ -31,6 +81,15 @@ func _physics_process(delta: float) -> void:
 	velocity.z = move_toward(velocity.z, target.z, acceleration * delta)
 	velocity.y = 0.0 if is_on_floor() else velocity.y - gravity * delta
 	move_and_slide()
+
+func _fly(delta: float) -> void:
+	velocity = Vector3.ZERO
+	var input := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+	var cam: Camera3D = head.get_node("Camera3D")
+	var cam_basis: Basis = cam.global_transform.basis
+	var dir: Vector3 = cam_basis * Vector3(input.x, 0.0, input.y)
+	if dir.length() > 0.001:
+		global_position += dir.normalized() * fly_speed * delta
 
 func horizontal_speed() -> float:
 	return Vector2(velocity.x, velocity.z).length()

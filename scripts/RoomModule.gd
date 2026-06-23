@@ -46,10 +46,13 @@ const PROP_COLLISION_SIZES := {
 
 # Large props that should NOT have physics (block doorways when fallen)
 const STATIC_PROPS := [
-	"door",
 	"ladder",
 	"shelf",
 ]
+# Real downloaded crash sounds (first that exists wins; falls back to synthesis)
+const COLLAPSE_SOUNDS := ["res://audio/collapse.ogg", "res://audio/collapse.wav", "res://audio/collapse.mp3"]
+const ROAR_SOUND := "res://audio/horror_stinger.wav"
+var _collapsed := false
 @export var biome := 0
 @export var openings := 0
 @export var grid_coord := Vector2i.ZERO
@@ -83,6 +86,7 @@ func _build_room() -> void:
 	_add_room_light()
 	if biome == 0 and ceiling_rift:
 		_add_ceiling_rift()
+	_maybe_setup_collapse()
 
 func _wall(side: int, has_opening: bool, material: Material) -> void:
 	var horizontal := side == 0 or side == 2
@@ -203,10 +207,6 @@ func _add_depth_cues(_palette_unused: Array[Material]) -> void:
 		_add_box("NearBlackCorner", Vector3(1.8, 2.2, 0.04), Vector3(-4.91, 1.1, -3.9), darkness, false)
 	if posmod(cell_seed, 4) == 1:
 		_add_box("WrongShadowPatch", Vector3(2.4, 0.03, 1.4), Vector3(2.1, 0.021, -2.9), darkness, false)
-	if biome == 3 or biome == 5:
-		var haze_panel := _material(Color(0.09, 0.11, 0.10, 0.22), 1.0)
-		haze_panel.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		_add_box("DistanceHazeSheet", Vector3(7.6, 2.1, 0.035), Vector3(0, 1.45, 4.65), haze_panel, false)
 	# Extra darkness overlay for deep rooms
 	if depth_factor > 0.6:
 		var deep_dark := _material(Color(0.0, 0.0, 0.0, 0.18 * depth_factor), 1.0)
@@ -409,8 +409,12 @@ func _spawn_external_model(prop_id: String, pos: Vector3, scale_value: Vector3, 
 		body.mass = PROP_MASSES.get(prop_id, 15.0)
 		body.position = jittered_pos
 		body.rotation_degrees = jittered_rot
-		body.sleeping = true
-		body.can_sleep = true
+		body.sleeping = prop_id != "door"
+		body.can_sleep = prop_id != "door"
+		if prop_id == "door":
+			# Thin, tall and top-heavy — start tilted so it topples over with a slam.
+			body.rotation_degrees.x += 6.0
+			body.angular_velocity = Vector3((1.0 if jitter_seed % 2 == 0 else -1.0) * 0.6, 0.0, 0.0)
 		var base_size: Vector3 = PROP_COLLISION_SIZES.get(prop_id, Vector3(0.6, 0.75, 0.6))
 		var col := CollisionShape3D.new()
 		var shape := BoxShape3D.new()
@@ -734,6 +738,119 @@ func _emissive_material(color: Color, energy := 1.0) -> StandardMaterial3D:
 	material.emission = color
 	material.emission_energy_multiplier = energy
 	return material
+
+## Some rooms (not spawn, not portal) collapse when the player walks in.
+func _maybe_setup_collapse() -> void:
+	if is_portal_room or grid_coord == Vector2i.ZERO:
+		return
+	var collapse_seed := absi(grid_coord.x * 71 + grid_coord.y * 191 + biome * 313)
+	if posmod(collapse_seed, 8) != 0:
+		return
+	var area := Area3D.new()
+	area.name = "CeilingCollapseTrigger"
+	var col := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = Vector3(room_size * 0.55, room_height, room_size * 0.55)
+	col.shape = shape
+	col.position = Vector3(0, room_height * 0.5, 0)
+	area.add_child(col)
+	add_child(area)
+	area.body_entered.connect(_on_collapse_entered)
+
+func _on_collapse_entered(body: Node3D) -> void:
+	if _collapsed or not body is PlayerController:
+		return
+	_collapsed = true
+	_play_collapse_sound()
+	_spawn_falling_debris()
+	# Brief beat so the crash lands, then the player is knocked to the floor.
+	get_tree().create_timer(0.22).timeout.connect(func() -> void:
+		if is_instance_valid(body) and body.has_method("knock_down"):
+			body.knock_down(10.0)
+	)
+	# A roar in the dark while the player is down.
+	if ResourceLoader.exists(ROAR_SOUND):
+		get_tree().create_timer(1.6).timeout.connect(func() -> void:
+			if not is_instance_valid(self):
+				return
+			var roar := AudioStreamPlayer3D.new()
+			roar.stream = load(ROAR_SOUND)
+			roar.volume_db = 2.0
+			roar.max_distance = 50.0
+			roar.unit_size = 14.0
+			roar.finished.connect(roar.queue_free)
+			add_child(roar)
+			roar.position = Vector3(0, 1.4, -room_size * 0.4)
+			roar.play()
+		)
+
+func _play_collapse_sound() -> void:
+	var stream: AudioStream = null
+	for path in COLLAPSE_SOUNDS:
+		if ResourceLoader.exists(path):
+			stream = load(path)
+			break
+	if stream == null:
+		stream = _make_crash_fallback()
+	var src := AudioStreamPlayer3D.new()
+	src.stream = stream
+	src.volume_db = 5.0
+	src.max_distance = 64.0
+	src.unit_size = 18.0
+	src.finished.connect(src.queue_free)
+	add_child(src)
+	src.position = Vector3(0, room_height, 0)
+	src.play()
+
+func _spawn_falling_debris() -> void:
+	var chunk_mat := _palette()[2]
+	var debris_seed := absi(grid_coord.x * 37 + grid_coord.y * 53 + 7)
+	for i in 18:
+		var size := Vector3(
+			0.5 + float(posmod(debris_seed + i * 13, 7)) * 0.18,
+			0.12 + float(posmod(debris_seed + i * 7, 4)) * 0.06,
+			0.5 + float(posmod(debris_seed + i * 17, 7)) * 0.18)
+		var rb := RigidBody3D.new()
+		rb.name = "CeilingChunk"
+		rb.mass = 6.0
+		var col := CollisionShape3D.new()
+		var shape := BoxShape3D.new()
+		shape.size = size
+		col.shape = shape
+		rb.add_child(col)
+		var mesh := MeshInstance3D.new()
+		var bm := BoxMesh.new()
+		bm.size = size
+		bm.material = chunk_mat
+		mesh.mesh = bm
+		rb.add_child(mesh)
+		add_child(rb)
+		var px := -room_size * 0.45 + float(posmod(debris_seed + i * 29, 101)) / 101.0 * room_size * 0.9
+		var pz := -room_size * 0.45 + float(posmod(debris_seed + i * 41, 101)) / 101.0 * room_size * 0.9
+		rb.position = Vector3(px, room_height - 0.12 - float(i % 3) * 0.28, pz)
+		rb.angular_velocity = Vector3(posmod(i, 5) - 2, posmod(i, 3) - 1, posmod(i, 7) - 3)
+
+func _make_crash_fallback() -> AudioStreamWAV:
+	var rate := 22050
+	var seconds := 2.3
+	var count := int(rate * seconds)
+	var data := PackedByteArray()
+	data.resize(count * 2)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 8821
+	var filtered := 0.0
+	for i in count:
+		var t := float(i) / rate
+		filtered = lerpf(filtered, rng.randf_range(-1.0, 1.0), 0.5)
+		var env := exp(-t * 1.7) * (1.0 + 0.7 * exp(-t * 13.0))
+		var rumble := sin(TAU * (72.0 - t * 22.0) * t) * 0.6
+		var value := (filtered * 0.7 + rumble) * env
+		data.encode_s16(i * 2, int(clampf(value, -1.0, 1.0) * 21000.0))
+	var wav := AudioStreamWAV.new()
+	wav.format = AudioStreamWAV.FORMAT_16_BITS
+	wav.mix_rate = rate
+	wav.data = data
+	return wav
 
 func _add_box(node_name: String, size: Vector3, pos: Vector3, material: Material, collision_enabled: bool) -> MeshInstance3D:
 	var node := MeshInstance3D.new()

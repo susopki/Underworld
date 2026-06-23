@@ -12,11 +12,12 @@ config_version=5
 
 config/name="Underworld"
 run/main_scene="res://scenes/Intro.tscn"
-config/features=PackedStringArray("4.7")
+config/features=PackedStringArray("4.6")
 
 [autoload]
 
 MCPRuntime="*uid://c6h0mrylm1vnd"
+DevConsole="*res://scripts/DevConsole.gd"
 
 [display]
 
