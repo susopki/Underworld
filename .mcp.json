@@ -9,7 +9,8 @@
       "env": {
         "GODOT_PATH": "/usr/bin/godot",
         "GOPEAK_TOOL_PROFILE": "compact",
-        "GODOT_PROJECT_PATH": "/home/tux/Underworld"
+        "GODOT_PROJECT_PATH": "/home/tux/Underworld",
+        "GOPEAK_BRIDGE_PORT": "6506"
       }
     }
   }
