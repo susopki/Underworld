@@ -70,38 +70,71 @@ func _add_cloud_window(side: int, base: Vector3) -> void:
 		_add_box("WindowFrame", bar_size, bar_pos, frame, false)
 
 func _add_biome_geometry(palette: Array[Material]) -> void:
+	var variant := posmod(grid_coord.x * 31 + grid_coord.y * 17, 4)
 	match biome:
 		0:
-			# Low office partitions create several sight lines per room.
-			if (abs(grid_coord.x) + abs(grid_coord.y)) % 2 == 0:
+			if variant == 0:
 				_add_box("CubicleA", Vector3(3.1, 1.35, 0.16), Vector3(-1.7, 0.67, 1.8), palette[0], true)
 				_add_box("CubicleB", Vector3(0.16, 1.35, 3.0), Vector3(1.4, 0.67, -1.4), palette[0], true)
+			elif variant == 1:
+				_add_box("OfficeColumnA", Vector3(0.58, 3.1, 0.58), Vector3(-2.4, 1.55, -2.4), palette[0], true)
+				_add_box("OfficeColumnB", Vector3(0.58, 3.1, 0.58), Vector3(2.4, 1.55, 2.4), palette[0], true)
+			elif variant == 2:
+				_add_box("LongPartition", Vector3(0.16, 1.55, 5.4), Vector3(-1.8, 0.77, 0.6), palette[0], true)
+			else:
+				_add_box("DroppedCeiling", Vector3(4.8, 0.35, 4.2), Vector3(1.8, room_height - 0.32, -1.7), palette[2], false)
 		1:
 			var water := _material(Color(0.08, 0.45, 0.54, 0.62), 0.08)
 			water.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-			_add_box("PoolWater", Vector3(7.4, 0.04, 7.4), Vector3(0, 0.08, 0), water, false)
-			for corner in [Vector3(-3.8, 1.8, -3.8), Vector3(3.8, 1.8, -3.8), Vector3(-3.8, 1.8, 3.8), Vector3(3.8, 1.8, 3.8)]:
-				_add_box("PoolColumn", Vector3(0.52, 3.6, 0.52), corner, palette[0], true)
+			_add_box("PoolWater", Vector3(8.8 if variant != 2 else 5.2, 0.04, 8.8), Vector3(0, 0.08, 0), water, false)
+			if variant == 0:
+				for corner in [Vector3(-3.8, 1.8, -3.8), Vector3(3.8, 1.8, -3.8), Vector3(-3.8, 1.8, 3.8), Vector3(3.8, 1.8, 3.8)]:
+					_add_box("PoolColumn", Vector3(0.52, 3.6, 0.52), corner, palette[0], true)
+			elif variant == 1:
+				_add_box("PoolBridge", Vector3(2.2, 0.18, 8.7), Vector3(-2.7, 0.12, 0), palette[1], true)
+			elif variant == 2:
+				_add_box("DryIsland", Vector3(3.5, 0.24, 3.5), Vector3(2.3, 0.12, -1.8), palette[1], true)
+			else:
+				_add_box("LowPoolArch", Vector3(8.5, 0.52, 0.5), Vector3(0, 3.15, 0), palette[0], true)
 		2:
 			var dark_wood := _material(Color(0.055, 0.028, 0.021), 0.9)
-			_add_box("ApartmentDivider", Vector3(4.4, 2.55, 0.18), Vector3(-2.8, 1.27, 2.35), palette[0], true)
-			_add_box("FalseApartmentDoor", Vector3(1.25, 2.35, 0.08), Vector3(-2.7, 1.17, 2.23), dark_wood, false)
+			if variant % 2 == 0:
+				_add_box("ApartmentDivider", Vector3(4.4, 2.55, 0.18), Vector3(-2.8, 1.27, 2.35), palette[0], true)
+				_add_box("FalseApartmentDoor", Vector3(1.25, 2.35, 0.08), Vector3(-2.7, 1.17, 2.23), dark_wood, false)
+			else:
+				_add_box("ApartmentDivider", Vector3(0.18, 2.55, 4.8), Vector3(2.6, 1.27, -2.4), palette[0], true)
+				_add_box("FalseApartmentDoor", Vector3(0.08, 2.35, 1.25), Vector3(2.48, 1.17, -2.3), dark_wood, false)
+			if variant == 3:
+				_add_box("AbandonedCounter", Vector3(2.4, 0.9, 0.7), Vector3(-1.4, 0.45, -2.6), dark_wood, true)
 		3:
 			var metal := _material(Color(0.035, 0.045, 0.04), 0.38)
-			_add_box("PipeA", Vector3(0.24, 0.24, 9.4), Vector3(-4.35, 2.75, 0), metal, false)
-			_add_box("PipeB", Vector3(9.4, 0.2, 0.2), Vector3(0, 3.05, 4.25), metal, false)
-			_add_box("ConcreteBeam", Vector3(10, 0.42, 0.48), Vector3(0, 2.92, 0), palette[2], true)
+			if variant == 0 or variant == 2:
+				_add_box("PipeA", Vector3(0.24, 0.24, 9.4), Vector3(-4.35, 2.75, 0), metal, false)
+			if variant == 1 or variant == 2:
+				_add_box("PipeB", Vector3(9.4, 0.2, 0.2), Vector3(0, 3.05, 4.25), metal, false)
+			if variant >= 2:
+				_add_box("ConcreteBeam", Vector3(10, 0.42, 0.48), Vector3(0, 2.92, 0), palette[2], true)
+			if variant == 3:
+				_add_box("MaintenanceBlock", Vector3(2.2, 2.1, 2.6), Vector3(3.4, 1.05, -2.8), palette[0], true)
 		4:
 			var shutter := _material(Color(0.11, 0.105, 0.095), 0.55)
-			_add_box("ClosedShop", Vector3(6.2, 3.45, 0.18), Vector3(0.8, 1.72, -3.55), shutter, true)
-			for x in [-1.9, -0.95, 0.0, 0.95, 1.9]:
-				_add_box("ShutterLine", Vector3(0.055, 3.2, 0.24), Vector3(x + 0.8, 1.65, -3.42), palette[2], false)
-			_add_box("MallBench", Vector3(2.6, 0.34, 0.72), Vector3(-2.5, 0.48, 2.2), _material(Color(0.16, 0.09, 0.055), 0.72), true)
+			if variant <= 1:
+				_add_box("ClosedShop", Vector3(6.2, 3.45, 0.18), Vector3(0.8, 1.72, -3.55), shutter, true)
+				for x in [-1.9, -0.95, 0.0, 0.95, 1.9]:
+					_add_box("ShutterLine", Vector3(0.055, 3.2, 0.24), Vector3(x + 0.8, 1.65, -3.42), palette[2], false)
+			elif variant == 2:
+				_add_box("MallBench", Vector3(2.6, 0.34, 0.72), Vector3(-2.5, 0.48, 2.2), _material(Color(0.16, 0.09, 0.055), 0.72), true)
+			else:
+				_add_box("DeadKiosk", Vector3(2.4, 1.15, 2.4), Vector3(2.5, 0.57, 1.5), shutter, true)
 		5:
 			var concrete := palette[0]
-			for step in 7:
-				_add_box("ImpossibleStep", Vector3(3.4, 0.22, 0.72), Vector3(1.7, 0.11 + step * 0.22, 2.6 - step * 0.7), concrete, true)
+			if variant != 1:
+				var side := -1.0 if variant == 3 else 1.0
+				for step in 7:
+					_add_box("ImpossibleStep", Vector3(3.4, 0.22, 0.72), Vector3(side * 1.7, 0.11 + step * 0.22, 2.6 - step * 0.7), concrete, true)
 			_add_box("StairCore", Vector3(0.34, 4.8, 0.34), Vector3(-2.7, 2.4, -2.5), concrete, true)
+			if variant == 1:
+				_add_box("EmptyLanding", Vector3(4.6, 0.3, 4.6), Vector3(1.9, 0.15, 1.8), concrete, true)
 			_add_box("Handrail", Vector3(0.1, 0.1, 5.8), Vector3(3.25, 1.55, 0.2), _material(Color(0.04, 0.045, 0.05), 0.3), false)
 
 func _add_ceiling_rift() -> void:

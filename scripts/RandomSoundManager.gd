@@ -7,6 +7,7 @@ var _timer := 8.0
 var _player_step_timer := 0.0
 var _rng := RandomNumberGenerator.new()
 var _ambience_player: AudioStreamPlayer
+var _music_player: AudioStreamPlayer
 
 func _ready() -> void:
 	_rng.randomize()
@@ -26,6 +27,9 @@ func set_biome(biome: int) -> void:
 	_ambience_player.stream = _make_biome_ambience(current_biome)
 	_ambience_player.volume_db = [-28.0, -25.0, -31.0, -22.0, -29.0, -24.0][current_biome]
 	_ambience_player.play()
+	if _music_player:
+		_music_player.stream = _make_byte_music(current_biome)
+		_music_player.play()
 
 func _start_ambience() -> void:
 	_ambience_player = AudioStreamPlayer.new()
@@ -34,6 +38,12 @@ func _start_ambience() -> void:
 	_ambience_player.volume_db = -28.0
 	add_child(_ambience_player)
 	_ambience_player.play()
+	_music_player = AudioStreamPlayer.new()
+	_music_player.name = "AlmostInaudibleByteMusic"
+	_music_player.stream = _make_byte_music(0)
+	_music_player.volume_db = -43.0
+	add_child(_music_player)
+	_music_player.play()
 
 func _update_player_steps(delta: float) -> void:
 	if not player:
@@ -41,7 +51,7 @@ func _update_player_steps(delta: float) -> void:
 	if player.horizontal_speed() > 0.35 and player.is_on_floor():
 		_player_step_timer -= delta
 		if _player_step_timer <= 0.0:
-			_play_3d(_make_single_step(), player.global_position + Vector3(0, 0.08, 0), -18.0)
+			_play_3d(_make_single_step(), player.global_position + Vector3(0, 0.08, 0), -30.0)
 			_player_step_timer = 0.58
 	else:
 		_player_step_timer = minf(_player_step_timer, 0.12)
@@ -69,7 +79,7 @@ func _play_biome_event() -> void:
 func play_distant_steps() -> void:
 	var side := -1.0 if _rng.randf() < 0.5 else 1.0
 	var where := player.global_position + player.global_transform.basis.z * _rng.randf_range(8.0, 18.0) + Vector3(side * 2.2, 0.3, 0)
-	_play_3d(_make_steps(), where, -10.0)
+	_play_3d(_make_steps(), where, -18.0)
 
 func play_wall_breath() -> void:
 	var side := -1.0 if _rng.randf() < 0.5 else 1.0
@@ -131,6 +141,36 @@ func _make_biome_ambience(biome: int) -> AudioStreamWAV:
 		data.encode_s16(i * 2, int(clampf(value, -1.0, 1.0) * 12000.0))
 	return _wav(data, rate, true)
 
+func _make_byte_music(biome: int) -> AudioStreamWAV:
+	var rate := 22050
+	var seconds := 8.0
+	var count := int(rate * seconds)
+	var data := PackedByteArray()
+	data.resize(count * 2)
+	var notes: Array[int]
+	match biome:
+		0: notes = [45, 0, 52, 48, 0, 47, 43, 0, 50, 0, 48, 45, 0, 40, 43, 0]
+		1: notes = [50, 55, 57, 0, 55, 52, 0, 48, 50, 0, 45, 48, 0, 43, 45, 0]
+		2: notes = [41, 0, 44, 48, 47, 0, 44, 40, 0, 39, 43, 46, 0, 43, 39, 0]
+		3: notes = [34, 34, 0, 37, 33, 0, 31, 31, 0, 38, 34, 0, 29, 0, 31, 0]
+		4: notes = [52, 0, 59, 55, 0, 54, 0, 47, 52, 0, 50, 43, 0, 45, 0, 42]
+		_: notes = [38, 0, 45, 41, 0, 36, 43, 0, 35, 0, 42, 38, 0, 33, 0, 30]
+	var step_length := seconds / notes.size()
+	for i in count:
+		var t := float(i) / rate
+		var step_index := mini(int(t / step_length), notes.size() - 1)
+		var note := notes[step_index]
+		var value := 0.0
+		if note > 0:
+			var frequency := 440.0 * pow(2.0, (note - 69.0) / 12.0)
+			var local_phase := fmod(t, step_length) / step_length
+			var envelope := smoothstep(0.0, 0.08, local_phase) * (1.0 - smoothstep(0.62, 1.0, local_phase))
+			var square := 1.0 if sin(TAU * frequency * t) >= 0.0 else -1.0
+			var sub_square := 1.0 if sin(TAU * frequency * 0.5 * t) >= 0.0 else -1.0
+			value = (square * 0.72 + sub_square * 0.28) * envelope * 0.22
+		data.encode_s16(i * 2, int(value * 9000.0))
+	return _wav(data, rate, true)
+
 func _make_steps() -> AudioStreamWAV:
 	var rate := 22050
 	var seconds := 4.3
@@ -143,7 +183,7 @@ func _make_steps() -> AudioStreamWAV:
 		var t := float(i) / rate
 		var envelope := _step_pulse(t, 0.78) + _step_pulse(t - 0.19, 0.78) * 0.42 + _step_pulse(t - 0.43, 0.78) * 0.2
 		var value := (sin(TAU * 62.0 * t) + rng.randf_range(-0.35, 0.35)) * envelope * 0.6
-		data.encode_s16(i * 2, int(clampf(value, -1.0, 1.0) * 15000.0))
+		data.encode_s16(i * 2, int(clampf(value, -1.0, 1.0) * 10500.0))
 	return _wav(data, rate, false)
 
 func _make_single_step() -> AudioStreamWAV:
@@ -158,8 +198,8 @@ func _make_single_step() -> AudioStreamWAV:
 		var t := float(i) / rate
 		var envelope := _decay_after(t, 0.0, 24.0) + _decay_after(t, 0.18, 22.0) * 0.32 + _decay_after(t, 0.39, 19.0) * 0.14
 		var tone := sin(TAU * (54.0 + current_biome * 4.0) * t)
-		var value := (tone + rng.randf_range(-0.42, 0.42)) * envelope * 0.62
-		data.encode_s16(i * 2, int(clampf(value, -1.0, 1.0) * 14500.0))
+		var value := (tone * 0.45 + rng.randf_range(-0.24, 0.24)) * envelope * 0.32
+		data.encode_s16(i * 2, int(clampf(value, -1.0, 1.0) * 9000.0))
 	return _wav(data, rate, false)
 
 func _step_pulse(time_value: float, period: float) -> float:

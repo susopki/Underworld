@@ -38,10 +38,23 @@ func _generate_level(level_id: int) -> void:
 func _build_layout() -> void:
 	cells.clear()
 	occupied.clear()
+	match current_level:
+		0: _layout_office_maze()
+		1: _layout_drowned_clusters()
+		2: _layout_apartment_spine()
+		3: _layout_tunnel_snake()
+		4: _layout_mall_atrium()
+		5: _layout_stairwell_spiral()
+
+func _add_cell(cell: Vector2i) -> void:
+	if not occupied.has(cell):
+		occupied[cell] = true
+		cells.append(cell)
+
+func _layout_office_maze() -> void:
 	var cursor := Vector2i.ZERO
-	cells.append(cursor)
-	occupied[cursor] = true
-	var directions := [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]
+	_add_cell(cursor)
+	var directions: Array[Vector2i] = [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]
 	while cells.size() < room_count:
 		if _rng.randf() < 0.34:
 			cursor = cells[_rng.randi_range(0, cells.size() - 1)]
@@ -49,9 +62,81 @@ func _build_layout() -> void:
 		if abs(candidate.x) > 6 or abs(candidate.y) > 6:
 			continue
 		cursor = candidate
-		if not occupied.has(cursor):
-			occupied[cursor] = true
-			cells.append(cursor)
+		_add_cell(cursor)
+
+func _layout_drowned_clusters() -> void:
+	# One vast 7x5 pool hall with a connected upper gallery: exactly 42 cells.
+	for x in range(-3, 4):
+		for y in range(-2, 3):
+			_add_cell(Vector2i(x, y))
+	for x in range(-3, 4):
+		_add_cell(Vector2i(x, 3))
+
+func _layout_apartment_spine() -> void:
+	# A long residential hallway with repeating side apartments.
+	for x in range(-6, 7):
+		_add_cell(Vector2i(x, 0))
+		_add_cell(Vector2i(x, -1))
+		_add_cell(Vector2i(x, 1))
+	_add_cell(Vector2i(-6, -2))
+	_add_cell(Vector2i(0, 2))
+	_add_cell(Vector2i(6, -2))
+
+func _layout_tunnel_snake() -> void:
+	# Service tunnels are a long deterministic snake with dead maintenance cuts.
+	# The old capped spiral could eventually walk the same loop forever.
+	for x in range(0, 12):
+		_add_cell(Vector2i(x, 0))
+	_add_cell(Vector2i(11, 1))
+	for x in range(11, -1, -1):
+		_add_cell(Vector2i(x, 2))
+	_add_cell(Vector2i(0, 3))
+	for x in range(0, 12):
+		_add_cell(Vector2i(x, 4))
+	for branch in [Vector2i(3, -1), Vector2i(8, 1), Vector2i(6, 3), Vector2i(10, 5)]:
+		_add_cell(branch)
+
+func _layout_mall_atrium() -> void:
+	# A rectangular atrium ring, cross-axis concourses, and shop bays.
+	for x in range(-5, 6):
+		_add_cell(Vector2i(x, -3))
+		_add_cell(Vector2i(x, 3))
+		_add_cell(Vector2i(x, 0))
+	for y in range(-2, 3):
+		_add_cell(Vector2i(-5, y))
+		_add_cell(Vector2i(5, y))
+	_add_cell(Vector2i(0, 1))
+
+func _layout_stairwell_spiral() -> void:
+	# Tight square spiral of landings; the room geometry supplies impossible flights.
+	var cursor := Vector2i.ZERO
+	_add_cell(cursor)
+	var direction := Vector2i.RIGHT
+	var leg_length := 1
+	while cells.size() < room_count:
+		for repeat in 2:
+			for i in leg_length:
+				cursor += direction
+				_add_cell(cursor)
+				if cells.size() >= room_count: return
+			direction = Vector2i(-direction.y, direction.x)
+		leg_length += 1
+
+func _fill_connected(start: Vector2i) -> void:
+	var cursor := start
+	var directions: Array[Vector2i] = [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]
+	while cells.size() < room_count:
+		var candidate: Vector2i = cursor + directions[_rng.randi_range(0, 3)]
+		if abs(candidate.x) <= 6 and abs(candidate.y) <= 6:
+			cursor = candidate
+			_add_cell(cursor)
+
+func _trim_layout() -> void:
+	while cells.size() > room_count:
+		var removed: Vector2i = cells.pop_back()
+		occupied.erase(removed)
+	if cells.size() < room_count:
+		_fill_connected(cells.back())
 
 func _openings_for(cell: Vector2i) -> int:
 	var mask := 0
