@@ -744,7 +744,7 @@ func _maybe_setup_collapse() -> void:
 	if is_portal_room or grid_coord == Vector2i.ZERO:
 		return
 	var collapse_seed := absi(grid_coord.x * 71 + grid_coord.y * 191 + biome * 313)
-	if posmod(collapse_seed, 8) != 0:
+	if posmod(collapse_seed, 26) != 0:
 		return
 	var area := Area3D.new()
 	area.name = "CeilingCollapseTrigger"

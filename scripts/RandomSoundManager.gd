@@ -142,8 +142,7 @@ func _make_biome_ambience(biome: int) -> AudioStreamWAV:
 		var value := 0.0
 		match biome:
 			0:
-				var flutter := 0.72 + 0.28 * sin(TAU * 0.37 * t) * sin(TAU * 1.9 * t)
-				value = sin(TAU * 49.0 * t) * 0.42 + sin(TAU * 98.0 * t) * 0.16 + sin(TAU * 2360.0 * t) * 0.018 * flutter + filtered * 0.08
+				value = sin(TAU * 49.0 * t) * 0.42 + sin(TAU * 98.0 * t) * 0.16 + filtered * 0.08
 			1:
 				value = sin(TAU * 31.0 * t) * 0.24 + filtered * 0.38 + sin(TAU * 0.46 * t) * sin(TAU * 72.0 * t) * 0.12
 			2:
@@ -214,14 +213,14 @@ func _make_tonal_event(kind: int) -> AudioStreamWAV:
 			0: value = (sin(TAU * 43.0 * t) * 1.1 + sin(TAU * 61.0 * t) * 0.55 + rng.randf_range(-0.7, 0.7)) * exp(-t * 3.8)
 			1:
 				filtered = lerpf(filtered, rng.randf_range(-1.0, 1.0), 0.025)
-				value = filtered * sin(TAU * (480.0 + sin(t * 3.0) * 220.0) * t) * sin(PI * t / seconds)
+				value = filtered * sin(TAU * (150.0 + sin(t * 3.0) * 55.0) * t) * sin(PI * t / seconds)
 			2:
 				filtered = lerpf(filtered, rng.randf_range(-1.0, 1.0), 0.055)
 				value = filtered * (0.25 + 0.75 * sin(TAU * 2.7 * t)) * sin(PI * t / seconds) + sin(TAU * 127.0 * t) * 0.08
-			3: value = rng.randf_range(-1.0, 1.0) * exp(-t * 22.0) + sin(TAU * 940.0 * t) * exp(-t * 14.0)
+			3: value = rng.randf_range(-1.0, 1.0) * exp(-t * 22.0) * 0.4 + sin(TAU * 190.0 * t) * exp(-t * 14.0)
 			4:
-				value = sin(TAU * (720.0 - t * 310.0) * t) * exp(-t * 10.0)
-				if t > 0.23: value += sin(TAU * 390.0 * (t - 0.23)) * exp(-(t - 0.23) * 9.0) * 0.45
+				value = sin(TAU * (210.0 - t * 90.0) * t) * exp(-t * 10.0)
+				if t > 0.23: value += sin(TAU * 150.0 * (t - 0.23)) * exp(-(t - 0.23) * 9.0) * 0.45
 			5:
 				value = sin(TAU * 68.0 * t) * exp(-t * 18.0)
 				if t > 0.62: value += sin(TAU * 59.0 * (t - 0.62)) * exp(-(t - 0.62) * 16.0) * 0.58

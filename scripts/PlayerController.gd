@@ -13,6 +13,7 @@ var fly_speed := 8.0
 var _knocked := false
 var _head_rest_y := 1.58
 var _eyelids: ColorRect
+var _flashlight: SpotLight3D
 
 func set_noclip(enabled: bool) -> void:
 	noclip = enabled
@@ -22,7 +23,22 @@ func _ready() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	_head_rest_y = head.position.y
 	_build_eyelids()
+	_build_flashlight()
 	_add_breathing()
+
+func _build_flashlight() -> void:
+	# Dim handheld light, aimed where the camera looks. Toggle with 1.
+	_flashlight = SpotLight3D.new()
+	_flashlight.name = "Flashlight"
+	_flashlight.light_color = Color(1.0, 0.95, 0.82)
+	_flashlight.light_energy = 1.1
+	_flashlight.spot_range = 13.0
+	_flashlight.spot_angle = 32.0
+	_flashlight.spot_attenuation = 1.4
+	_flashlight.shadow_enabled = true
+	_flashlight.position = Vector3(0.12, -0.18, 0.0)
+	_flashlight.visible = false
+	head.get_node("Camera3D").add_child(_flashlight)
 
 func _build_eyelids() -> void:
 	var layer := CanvasLayer.new()
@@ -58,6 +74,9 @@ func knock_down(black_time := 10.0) -> void:
 func _input(event: InputEvent) -> void:
 	if _knocked:
 		return
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_1:
+		if _flashlight:
+			_flashlight.visible = not _flashlight.visible
 	if event is InputEventMouseButton and event.pressed:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
