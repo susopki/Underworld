@@ -3,16 +3,59 @@ extends Node3D
 
 const CLOUDS := preload("res://materials/cloud_window.tres")
 const EXTERNAL_PROPS := {
-	"desk": "res://assets/models/polyhaven/metal_office_desk/metal_office_desk_1k.gltf",
-	"shelf": "res://assets/models/polyhaven/Shelf_01/Shelf_01_1k.gltf",
-	"box": "res://assets/models/polyhaven/cardboard_box_01/cardboard_box_01_1k.gltf",
-	"trash": "res://assets/models/polyhaven/metal_trash_can/metal_trash_can_1k.gltf",
-	"door": "res://assets/models/polyhaven/large_castle_door/large_castle_door_1k.gltf",
+	"desk":        "res://assets/models/polyhaven/metal_office_desk/metal_office_desk_1k.gltf",
+	"shelf":       "res://assets/models/polyhaven/Shelf_01/Shelf_01_1k.gltf",
+	"box":         "res://assets/models/polyhaven/cardboard_box_01/cardboard_box_01_1k.gltf",
+	"trash":       "res://assets/models/polyhaven/metal_trash_can/metal_trash_can_1k.gltf",
+	"door":        "res://assets/models/polyhaven/large_castle_door/large_castle_door_1k.gltf",
+	"chair":       "res://assets/models/polyhaven/SchoolChair_01/SchoolChair_01_1k.gltf",
+	"barrel":      "res://assets/models/polyhaven/Barrel_01/Barrel_01_1k.gltf",
+	"table":       "res://assets/models/polyhaven/WoodenTable_01/WoodenTable_01_1k.gltf",
+	"wet_sign":    "res://assets/models/polyhaven/WetFloorSign_01/WetFloorSign_01_1k.gltf",
+	"armchair":    "res://assets/models/polyhaven/ArmChair_01/ArmChair_01_1k.gltf",
+	"crowbar":     "res://assets/models/polyhaven/crowbar_01/crowbar_01_1k.gltf",
+	"laptop":      "res://assets/models/polyhaven/classic_laptop/classic_laptop_1k.gltf",
+	"cat_statue":  "res://assets/models/polyhaven/concrete_cat_statue/concrete_cat_statue_1k.gltf",
+	"ladder":      "res://assets/models/polyhaven/wooden_ladder/wooden_ladder_1k.gltf",
+	"monobloc":    "res://assets/models/polyhaven/plastic_monobloc_chair_01/plastic_monobloc_chair_01_1k.gltf",
+	"extinguisher":"res://assets/models/polyhaven/korean_fire_extinguisher_01/korean_fire_extinguisher_01_1k.gltf",
+	"bleach":      "res://assets/models/polyhaven/bleach_bottle/bleach_bottle_1k.gltf",
+	"radio":       "res://assets/models/polyhaven/vintage_radio_transceiver/vintage_radio_transceiver_1k.gltf",
+	"stool":       "res://assets/models/polyhaven/metal_stool_01/metal_stool_01_1k.gltf",
+	"spray":       "res://assets/models/polyhaven/spray_paint_bottles/spray_paint_bottles_1k.gltf",
 }
+# mass in kg — heavy props resist being knocked over
+const PROP_MASSES := {
+	"desk": 65.0, "shelf": 40.0, "box": 7.0, "trash": 10.0, "door": 90.0,
+	"chair": 8.0, "barrel": 32.0, "table": 28.0, "wet_sign": 3.0, "armchair": 22.0, "crowbar": 4.0,
+	"laptop": 2.5, "cat_statue": 18.0, "ladder": 12.0, "monobloc": 5.0, "extinguisher": 6.0, "bleach": 1.5, "radio": 8.0, "stool": 7.0, "spray": 1.0
+}
+# approximate collision box sizes in metres (unscaled)
+const PROP_COLLISION_SIZES := {
+	"desk": Vector3(1.55, 0.75, 0.82), "shelf": Vector3(0.42, 1.75, 0.88),
+	"box": Vector3(0.48, 0.42, 0.42), "trash": Vector3(0.38, 0.62, 0.38),
+	"door": Vector3(1.15, 2.4, 0.1), "chair": Vector3(0.48, 0.85, 0.48),
+	"barrel": Vector3(0.52, 0.82, 0.52), "table": Vector3(0.95, 0.75, 0.58),
+	"wet_sign": Vector3(0.48, 0.88, 0.22), "armchair": Vector3(0.88, 0.95, 0.78),
+	"crowbar": Vector3(0.07, 0.75, 0.05),
+	"laptop": Vector3(0.38, 0.06, 0.28), "cat_statue": Vector3(0.35, 0.65, 0.35), "ladder": Vector3(0.5, 2.2, 0.12),
+	"monobloc": Vector3(0.45, 0.85, 0.45), "extinguisher": Vector3(0.22, 0.55, 0.22),
+	"bleach": Vector3(0.12, 0.28, 0.12), "radio": Vector3(0.38, 0.18, 0.28),
+	"stool": Vector3(0.35, 0.55, 0.35), "spray": Vector3(0.18, 0.16, 0.18),
+}
+
+# Large props that should NOT have physics (block doorways when fallen)
+const STATIC_PROPS := [
+	"door",
+	"ladder",
+	"shelf",
+]
 @export var biome := 0
 @export var openings := 0
 @export var grid_coord := Vector2i.ZERO
 @export var ceiling_rift := false
+@export var depth_factor := 0.0
+@export var is_portal_room := false
 var room_size := 10.0
 var room_height := 3.25
 
@@ -32,9 +75,11 @@ func _build_room() -> void:
 	_add_ceiling_fixture()
 	_add_depth_cues(palette)
 	_add_biome_geometry(palette)
-	_add_external_downloaded_props()
+	if not is_portal_room:
+		_add_external_downloaded_props()
+		_add_unstable_architecture(palette)
 	_add_uncanny_props(palette)
-	_add_unstable_architecture(palette)
+	_add_atmosphere_effects()
 	_add_room_light()
 	if biome == 0 and ceiling_rift:
 		_add_ceiling_rift()
@@ -83,25 +128,27 @@ func _add_cloud_window(side: int, base: Vector3) -> void:
 		_add_box("WindowFrame", bar_size, bar_pos, frame, false)
 
 func _add_surface_age(palette: Array[Material]) -> void:
-	var seed: int = absi(grid_coord.x * 73856093 ^ grid_coord.y * 19349663 ^ biome * 83492791)
+	var cell_seed: int = absi(grid_coord.x * 73856093 ^ grid_coord.y * 19349663 ^ biome * 83492791)
 	var grime := _material(Color(0.015, 0.012, 0.009, 0.58), 1.0)
 	grime.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	var damp := _material(Color(0.04, 0.055, 0.045, 0.46), 1.0)
 	damp.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	var carpet_wear := _material(Color(0.9, 0.82, 0.52, 0.16), 1.0)
 	carpet_wear.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	for i in range(4):
-		var side := posmod(seed + i, 4)
+	# Deeper rooms are grimier: 4 stains near origin, up to 8 at the far end
+	var grime_count := 4 + int(depth_factor * 4)
+	for i in range(grime_count):
+		var side := posmod(cell_seed + i, 4)
 		var horizontal := side == 0 or side == 2
 		var sign_value := -1.0 if side == 0 or side == 3 else 1.0
 		var base := Vector3.ZERO
-		var stain_width := 1.0 + float(posmod(seed >> i, 7)) * 0.37
-		var stain_height := 0.28 + float(posmod(seed >> (i + 3), 5)) * 0.11
+		var stain_width := 1.0 + float(posmod(cell_seed >>i, 7)) * 0.37
+		var stain_height := 0.28 + float(posmod(cell_seed >>(i + 3), 5)) * 0.11
 		if horizontal:
-			base = Vector3(-3.4 + float(posmod(seed >> (i + 1), 7)), 0.7 + float(i) * 0.43, sign_value * room_size * 0.5 + -sign_value * 0.102)
+			base = Vector3(-3.4 + float(posmod(cell_seed >>(i + 1), 7)), 0.7 + float(i % 4) * 0.43, sign_value * room_size * 0.5 + -sign_value * 0.102)
 			_add_box("WallGrime", Vector3(stain_width, stain_height, 0.025), base, grime if i % 2 == 0 else damp, false)
 		else:
-			base = Vector3(sign_value * room_size * 0.5 + -sign_value * 0.102, 0.7 + float(i) * 0.43, -3.4 + float(posmod(seed >> (i + 1), 7)))
+			base = Vector3(sign_value * room_size * 0.5 + -sign_value * 0.102, 0.7 + float(i % 4) * 0.43, -3.4 + float(posmod(cell_seed >>(i + 1), 7)))
 			_add_box("WallGrime", Vector3(0.025, stain_height, stain_width), base, grime if i % 2 == 0 else damp, false)
 	for offset in [-3.4, -1.7, 0.0, 1.7, 3.4]:
 		if biome == 0:
@@ -117,11 +164,14 @@ func _add_surface_age(palette: Array[Material]) -> void:
 			_add_box("CeilingTileSeamZ", Vector3(9.6, 0.025, 0.035), Vector3(0, room_height - 0.09, z), grime, false)
 
 func _add_ceiling_fixture() -> void:
+	var cell_seed: int = absi(grid_coord.x * 53 + grid_coord.y * 71 + biome * 113)
 	var lamp_colors: Array[Color] = [Color(1.0, 0.82, 0.42), Color(0.53, 0.92, 1.0), Color(0.78, 0.55, 0.38), Color(0.42, 0.68, 0.53), Color(1.0, 0.82, 0.56), Color(0.56, 0.66, 0.78)]
 	var lamp_energies: Array[float] = [1.7, 1.3, 0.8, 0.7, 1.0, 0.6]
 	var lamp_color: Color = lamp_colors[biome]
-	var lamp := _emissive_material(lamp_color, lamp_energies[biome])
+	# Deep rooms may have dead fixtures
+	var fixture_dead := depth_factor > 0.55 and posmod(cell_seed, 3) == 0
 	var casing := _material(Color(0.045, 0.043, 0.036), 0.65)
+	var lamp := _emissive_material(lamp_color, lamp_energies[biome]) if not fixture_dead else casing
 	match biome:
 		0:
 			_add_box("FluorescentTubeA", Vector3(4.8, 0.055, 0.16), Vector3(0, room_height - 0.18, -1.25), lamp, false)
@@ -145,90 +195,175 @@ func _add_ceiling_fixture() -> void:
 			for x in [-0.42, 0.0, 0.42]:
 				_add_box("LightCageBars", Vector3(0.035, 0.5, 0.035), Vector3(x, room_height - 0.54, 0.42), casing, false)
 
-func _add_depth_cues(palette: Array[Material]) -> void:
+func _add_depth_cues(_palette_unused: Array[Material]) -> void:
 	var darkness := _material(Color(0.0, 0.0, 0.0, 0.34), 1.0)
 	darkness.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	var seed: int = absi(grid_coord.x * 13 + grid_coord.y * 29 + biome * 47)
-	if posmod(seed, 3) == 0:
+	var cell_seed: int = absi(grid_coord.x * 13 + grid_coord.y * 29 + biome * 47)
+	if posmod(cell_seed, 3) == 0:
 		_add_box("NearBlackCorner", Vector3(1.8, 2.2, 0.04), Vector3(-4.91, 1.1, -3.9), darkness, false)
-	if posmod(seed, 4) == 1:
+	if posmod(cell_seed, 4) == 1:
 		_add_box("WrongShadowPatch", Vector3(2.4, 0.03, 1.4), Vector3(2.1, 0.021, -2.9), darkness, false)
 	if biome == 3 or biome == 5:
 		var haze_panel := _material(Color(0.09, 0.11, 0.10, 0.22), 1.0)
 		haze_panel.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		_add_box("DistanceHazeSheet", Vector3(7.6, 2.1, 0.035), Vector3(0, 1.45, 4.65), haze_panel, false)
+	# Extra darkness overlay for deep rooms
+	if depth_factor > 0.6:
+		var deep_dark := _material(Color(0.0, 0.0, 0.0, 0.18 * depth_factor), 1.0)
+		deep_dark.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_add_box("DeepRoomFog", Vector3(room_size - 0.1, room_height - 0.1, room_size - 0.1), Vector3(0, room_height * 0.5, 0), deep_dark, false)
 
 func _add_uncanny_props(palette: Array[Material]) -> void:
-	var seed: int = absi(grid_coord.x * 91 + grid_coord.y * 127 + biome * 503)
+	var cell_seed: int = absi(grid_coord.x * 91 + grid_coord.y * 127 + biome * 503)
 	var dark := _material(Color(0.018, 0.016, 0.014), 0.92)
 	var red_dim := _emissive_material(Color(0.7, 0.035, 0.02), 0.35)
 	var cold_dim := _emissive_material(Color(0.22, 0.65, 0.86), 0.25)
-	if posmod(seed, 5) == 0:
-		var x := -3.8 + float(posmod(seed, 8))
+	if posmod(cell_seed, 5) == 0:
+		var x := -3.8 + float(posmod(cell_seed, 8))
 		_add_box("HangingCable", Vector3(0.045, 1.15, 0.045), Vector3(x, room_height - 0.75, -3.9), dark, false)
 		_add_box("CableEnd", Vector3(0.16, 0.08, 0.16), Vector3(x, room_height - 1.35, -3.9), dark, false)
-	if posmod(seed, 7) == 2 and biome != 1:
+	if posmod(cell_seed, 7) == 2 and biome != 1:
 		_add_box("DistantHumanLikeCutout", Vector3(0.52, 1.75, 0.08), Vector3(3.85, 0.88, 4.82), dark, false)
 		_add_box("CutoutHead", Vector3(0.34, 0.34, 0.09), Vector3(3.85, 1.94, 4.82), dark, false)
 	match biome:
 		0:
-			if posmod(seed, 3) == 1:
+			if posmod(cell_seed, 3) == 1:
 				_add_box("CollapsedOfficeTile", Vector3(1.4, 0.07, 0.86), Vector3(-2.4, room_height - 0.42, 2.8), palette[2], false).rotation_degrees.z = -8.0
 				_add_box("ExitSignNoExit", Vector3(0.95, 0.3, 0.08), Vector3(0, 2.25, -4.86), red_dim, false)
 		1:
 			_add_box("PoolLaneLine", Vector3(0.09, 0.045, 8.6), Vector3(-1.6, 0.13, 0), cold_dim, false)
 			_add_box("PoolLaneLine", Vector3(0.09, 0.045, 8.6), Vector3(1.6, 0.13, 0), cold_dim, false)
-			if posmod(seed, 4) == 0:
+			if posmod(cell_seed, 4) == 0:
 				_add_box("SubmergedBlackShape", Vector3(1.6, 0.035, 0.42), Vector3(2.6, 0.145, 2.4), dark, false)
 		2:
-			if posmod(seed, 3) != 0:
+			if posmod(cell_seed, 3) != 0:
 				_add_box("PeelingWallpaperStrip", Vector3(0.035, 1.25, 0.72), Vector3(-4.89, 1.35, -2.7), palette[2], false).rotation_degrees.z = 5.0
-			_add_box("ApartmentPeephole", Vector3(0.06, 0.06, 0.035), Vector3(2.43, 1.67, -2.3), red_dim if posmod(seed, 6) == 0 else dark, false)
+			_add_box("ApartmentPeephole", Vector3(0.06, 0.06, 0.035), Vector3(2.43, 1.67, -2.3), red_dim if posmod(cell_seed, 6) == 0 else dark, false)
 		3:
 			for z in [-3.2, 0.0, 3.2]:
 				_add_box("TunnelFloorGrate", Vector3(1.7, 0.035, 0.36), Vector3(0, 0.025, z), dark, true)
-			if posmod(seed, 4) == 1:
+			if posmod(cell_seed, 4) == 1:
 				_add_box("BentPipe", Vector3(0.18, 2.2, 0.18), Vector3(4.35, 1.4, -1.1), dark, false).rotation_degrees.x = 13.0
 		4:
-			if posmod(seed, 2) == 0:
+			if posmod(cell_seed, 2) == 0:
 				_add_box("StoreDisplayPedestal", Vector3(1.25, 0.85, 1.25), Vector3(-2.8, 0.42, -1.4), palette[0], true)
 				_add_box("HeadlessDisplayForm", Vector3(0.42, 1.15, 0.24), Vector3(-2.8, 1.42, -1.4), dark, false)
 			_add_box("DeadMallNeonLine", Vector3(2.6, 0.06, 0.06), Vector3(2.8, 2.6, -4.86), red_dim, false)
 		5:
-			_add_box("WrongFloorNumber", Vector3(0.58, 0.42, 0.04), Vector3(-4.88, 2.15, 0.9), red_dim if posmod(seed, 5) == 0 else dark, false)
-			if posmod(seed, 3) == 2:
+			_add_box("WrongFloorNumber", Vector3(0.58, 0.42, 0.04), Vector3(-4.88, 2.15, 0.9), red_dim if posmod(cell_seed, 5) == 0 else dark, false)
+			if posmod(cell_seed, 3) == 2:
 				_add_box("VerticalVoidSlit", Vector3(0.05, 3.4, 0.55), Vector3(4.88, 1.9, -2.4), dark, false)
 
 func _add_external_downloaded_props() -> void:
-	var seed: int = absi(grid_coord.x * 409 + grid_coord.y * 887 + biome * 1999)
+	var cell_seed: int = absi(grid_coord.x * 409 + grid_coord.y * 887 + biome * 1999)
+	var cluster := posmod(cell_seed, 3)
 	match biome:
 		0:
-			if posmod(seed, 2) == 0:
-				_spawn_external_model("desk", Vector3(-2.65, 0.02, -2.7), Vector3.ONE * 1.18, Vector3(0, 90, 0))
-				_spawn_external_model("trash", Vector3(2.95, 0.02, -3.15), Vector3.ONE * 0.82, Vector3.ZERO)
+			if cluster == 0:
+				# Office setup: desk + chair + laptop on desk + trash
+				_spawn_external_model("desk",   Vector3(-2.65, 0.02, -2.7),  Vector3.ONE * 1.18, Vector3(0, 90, 0))
+				_spawn_external_model("chair",  Vector3(-1.3,  0.02, -2.85), Vector3.ONE * 0.95, Vector3(0, 105, 0))
+				_spawn_external_model("laptop", Vector3(-2.65, 0.78, -2.7),  Vector3.ONE * 1.1,  Vector3(0, 90, 0))
+				_spawn_external_model("trash",  Vector3(-3.6,  0.02, -1.85), Vector3.ONE * 0.82, Vector3(0, 15, 0))
+			elif cluster == 1:
+				# Storage corner: shelf + boxes
+				_spawn_external_model("shelf", Vector3(3.88, 0.02, 1.9),  Vector3.ONE * 1.28, Vector3(0, -90, 0))
+				_spawn_external_model("box",   Vector3(2.95, 0.02, 1.2),  Vector3.ONE * 0.88, Vector3(0, 22, 0))
+				_spawn_external_model("box",   Vector3(2.65, 0.02, 2.55), Vector3.ONE * 0.78, Vector3(0, -8, 0))
 			else:
-				_spawn_external_model("shelf", Vector3(3.88, 0.02, 1.9), Vector3.ONE * 1.28, Vector3(0, -90, 0))
-			if posmod(seed, 5) == 3:
-				_spawn_external_model("door", Vector3(0.0, 0.03, 4.54), Vector3(1.35, 1.35, 1.15), Vector3(0, 180, 0))
+				# Scattered: door + laptop on floor
+				_spawn_external_model("door",   Vector3(0.0,  0.03, 4.54), Vector3(1.35, 1.35, 1.15), Vector3(0, 180, 0))
+				_spawn_external_model("laptop", Vector3(-3.1, 0.02, 2.8),  Vector3.ONE * 1.0,  Vector3(0, -35, 8))
+				if posmod(cell_seed, 5) == 3:
+					_spawn_external_model("crowbar", Vector3(-2.1, 0.02, 3.8), Vector3.ONE * 1.1, Vector3(0, 45, 15))
+				# Office extras
+				if posmod(cell_seed, 3) == 0:
+					_spawn_external_model("monobloc", Vector3(2.4, 0.02, -0.5), Vector3.ONE * 0.9, Vector3(0, -45, 0))
+				if posmod(cell_seed, 4) == 1:
+					_spawn_external_model("extinguisher", Vector3(4.35, 0.03, -3.4), Vector3.ONE * 0.85, Vector3(0, 90, 0))
+				if posmod(cell_seed, 6) == 2:
+					_spawn_external_model("radio", Vector3(-4.3, 0.02, 0.5), Vector3.ONE * 0.9, Vector3(0, 120, 0))
 		1:
-			if posmod(seed, 3) == 1:
+			# Drowned: wet sign + barrel near walls + occasional cat statue
+			_spawn_external_model("wet_sign", Vector3(-4.1, 0.03, 2.8), Vector3.ONE * 1.0, Vector3(0, 12, 0))
+			if posmod(cell_seed, 3) == 1:
+				_spawn_external_model("barrel", Vector3(3.8, 0.03, -3.2), Vector3.ONE * 0.9, Vector3(0, 35, 0))
+			if posmod(cell_seed, 4) == 2:
 				_spawn_external_model("trash", Vector3(-4.0, 0.04, 3.15), Vector3.ONE * 0.9, Vector3(0, 25, 0))
+			if posmod(cell_seed, 5) == 0:
+				_spawn_external_model("cat_statue", Vector3(1.5, 0.03, -3.6), Vector3.ONE * 1.0, Vector3(0, -20, 0))
+			# Drowned extras
+			if posmod(cell_seed, 3) == 0:
+				_spawn_external_model("bleach", Vector3(-3.8, 0.02, -0.5), Vector3.ONE * 1.0, Vector3(0, 30, 0))
+			if posmod(cell_seed, 5) == 2:
+				_spawn_external_model("stool", Vector3(4.2, 0.02, 2.6), Vector3.ONE * 1.0, Vector3(0, -60, 0))
 		2:
-			if posmod(seed, 2) == 0:
+			if cluster == 0:
+				# Living room feel: armchair + table
+				_spawn_external_model("armchair", Vector3(-2.5, 0.02, 1.8),  Vector3.ONE * 1.05, Vector3(0, 160, 0))
+				_spawn_external_model("table",    Vector3(-1.0, 0.02, 2.35), Vector3.ONE * 0.85, Vector3(0, 0, 0))
+			elif cluster == 1:
+				# Apartment door + box
 				_spawn_external_model("door", Vector3(-2.7, 0.03, 2.18), Vector3(1.05, 1.1, 0.9), Vector3(0, 0, 0))
+				_spawn_external_model("box",  Vector3(-3.6, 0.03, 1.2),  Vector3.ONE * 0.9, Vector3(0, 17, 0))
 			else:
-				_spawn_external_model("box", Vector3(-3.15, 0.03, -3.0), Vector3.ONE * 1.05, Vector3(0, 17, 0))
+				# Chair + scattered
+				_spawn_external_model("chair", Vector3(2.2,  0.02, -2.5), Vector3.ONE * 1.0, Vector3(0, -30, 0))
+				_spawn_external_model("box",   Vector3(-3.15, 0.03, -3.0), Vector3.ONE * 1.05, Vector3(0, 17, 0))
+			# Apartment extras
+			if posmod(cell_seed, 4) == 0:
+				_spawn_external_model("monobloc", Vector3(-2.8, 0.02, -1.5), Vector3.ONE * 0.85, Vector3(0, 80, 0))
+			if posmod(cell_seed, 5) == 1:
+				_spawn_external_model("radio", Vector3(-2.2, 0.75, 0.8), Vector3.ONE * 0.95, Vector3(0, -15, 5))
 		3:
-			_spawn_external_model("trash", Vector3(3.95, 0.03, -2.85), Vector3.ONE * 0.85, Vector3(0, -20, 0))
-			if posmod(seed, 4) == 0:
-				_spawn_external_model("box", Vector3(-3.35, 0.04, 2.7), Vector3.ONE * 0.9, Vector3(0, 37, 0))
+			# Maintenance cluster: barrel + box + crowbar + ladder against wall
+			_spawn_external_model("barrel",  Vector3(3.95, 0.03, -2.85), Vector3.ONE * 0.85, Vector3(0, -20, 0))
+			if posmod(cell_seed, 2) == 0:
+				_spawn_external_model("box",     Vector3(3.2,  0.04,  2.7),  Vector3.ONE * 0.9,  Vector3(0, 37, 0))
+				_spawn_external_model("crowbar", Vector3(2.55, 0.02,  2.2),  Vector3.ONE * 1.0,  Vector3(0, 80, 12))
+			else:
+				_spawn_external_model("trash",   Vector3(-3.5, 0.03, -1.8),  Vector3.ONE * 0.85, Vector3(0, -15, 0))
+			if posmod(cell_seed, 3) == 1:
+				_spawn_external_model("ladder", Vector3(-4.6, 0.02, 0.5), Vector3.ONE * 1.0, Vector3(8, 0, 0))
+			# Tunnel extras
+			if posmod(cell_seed, 2) == 0:
+				_spawn_external_model("extinguisher", Vector3(-3.2, 0.03, 4.5), Vector3.ONE * 0.9, Vector3(0, 0, 0))
+			if posmod(cell_seed, 3) == 2:
+				_spawn_external_model("spray", Vector3(-4.2, 0.02, -3.1), Vector3.ONE * 1.0, Vector3(0, 40, -10))
+			if posmod(cell_seed, 4) == 1:
+				_spawn_external_model("stool", Vector3(4.5, 0.02, 3.4), Vector3.ONE * 0.95, Vector3(0, 180, 0))
 		4:
-			if posmod(seed, 3) != 0:
-				_spawn_external_model("shelf", Vector3(-3.65, 0.03, -1.2), Vector3.ONE * 1.15, Vector3(0, 90, 0))
-				_spawn_external_model("box", Vector3(2.8, 0.04, 2.85), Vector3.ONE * 0.85, Vector3(0, -12, 0))
+			if cluster == 0:
+				# Mall shelf display + cat statue as decoration
+				_spawn_external_model("shelf",     Vector3(-3.65, 0.03, -1.2), Vector3.ONE * 1.15, Vector3(0, 90, 0))
+				_spawn_external_model("box",       Vector3(-3.1,  0.04,  0.5), Vector3.ONE * 0.82, Vector3(0, -12, 0))
+				_spawn_external_model("wet_sign",  Vector3(-2.2,  0.03,  1.6), Vector3.ONE * 0.95, Vector3(0, 25, 0))
+				if posmod(cell_seed, 2) == 0:
+					_spawn_external_model("cat_statue", Vector3(-1.0, 0.03, -3.8), Vector3.ONE * 0.9, Vector3(0, 45, 0))
+			elif cluster == 1:
+				# Seating zone: armchair + table
+				_spawn_external_model("armchair", Vector3(2.4,  0.02,  2.1), Vector3.ONE * 1.1,  Vector3(0, -50, 0))
+				_spawn_external_model("table",    Vector3(3.7,  0.02,  1.5), Vector3.ONE * 1.0,  Vector3(0, 0, 0))
+			else:
+				_spawn_external_model("shelf",    Vector3(2.8,  0.03, -2.5), Vector3.ONE * 1.15, Vector3(0, -90, 0))
+				_spawn_external_model("box",      Vector3(2.0,  0.04, -3.3), Vector3.ONE * 0.85, Vector3(0, 10, 0))
+			# Mall extras
+			if posmod(cell_seed, 3) == 0:
+				_spawn_external_model("monobloc", Vector3(-3.5, 0.02, 2.8), Vector3.ONE * 1.0, Vector3(0, 15, 0))
+			if posmod(cell_seed, 5) == 2:
+				_spawn_external_model("stool", Vector3(1.8, 0.02, -2.8), Vector3.ONE * 1.0, Vector3(0, -75, 0))
 		5:
-			if posmod(seed, 2) == 1:
-				_spawn_external_model("door", Vector3(4.45, 0.03, -2.2), Vector3(1.0, 1.08, 0.9), Vector3(0, -90, 0))
+			if posmod(cell_seed, 2) == 1:
+				_spawn_external_model("door",    Vector3(4.45, 0.03, -2.2), Vector3(1.0, 1.08, 0.9), Vector3(0, -90, 0))
+			if posmod(cell_seed, 3) == 0:
+				_spawn_external_model("crowbar", Vector3(-3.8, 0.02,  1.5), Vector3.ONE * 1.1, Vector3(0, 60, 18))
+			if posmod(cell_seed, 2) == 0:
+				_spawn_external_model("ladder",  Vector3(4.7,  0.02, -0.8), Vector3.ONE * 1.05, Vector3(5, 0, 0))
+			# Stairwell extras
+			if posmod(cell_seed, 3) == 0:
+				_spawn_external_model("bleach", Vector3(-3.2, 0.02, 3.8), Vector3.ONE * 0.9, Vector3(0, -25, 15))
+			if posmod(cell_seed, 4) == 1:
+				_spawn_external_model("extinguisher", Vector3(3.5, 0.03, 4.2), Vector3.ONE * 0.85, Vector3(0, -90, 0))
 
 func _spawn_external_model(prop_id: String, pos: Vector3, scale_value: Vector3, rotation_deg: Vector3) -> Node3D:
 	var path: String = EXTERNAL_PROPS.get(prop_id, "")
@@ -241,35 +376,75 @@ func _spawn_external_model(prop_id: String, pos: Vector3, scale_value: Vector3, 
 	if not instance is Node3D:
 		instance.queue_free()
 		return null
-	var node := instance as Node3D
-	node.name = "DownloadedProp_%s" % prop_id
-	node.position = pos
-	node.scale = scale_value
-	node.rotation_degrees = rotation_deg
-	add_child(node)
-	return node
+	var visual := instance as Node3D
+	visual.scale = scale_value
+
+	# Deterministic random jitter per prop per room for variety
+	var jitter_seed := absi(grid_coord.x * 97 + grid_coord.y * 163 + prop_id.hash() * 37)
+	var jitter_x := (posmod(jitter_seed, 59) - 29) * 0.007
+	var jitter_z := (posmod(jitter_seed >> 3, 51) - 25) * 0.007
+	var jitter_rot := (posmod(jitter_seed >> 6, 21) - 10) * 1.2
+	var jittered_pos := pos + Vector3(jitter_x, 0.04, jitter_z)
+	var jittered_rot := rotation_deg + Vector3(0, jitter_rot, 0)
+
+	var is_static := prop_id in STATIC_PROPS
+	if is_static:
+		var body := StaticBody3D.new()
+		body.name = "Prop_%s" % prop_id
+		body.position = jittered_pos
+		body.rotation_degrees = jittered_rot
+		var base_size: Vector3 = PROP_COLLISION_SIZES.get(prop_id, Vector3(0.6, 0.75, 0.6))
+		var col := CollisionShape3D.new()
+		var shape := BoxShape3D.new()
+		shape.size = base_size * scale_value
+		col.position = Vector3(0, base_size.y * scale_value.y * 0.5, 0)
+		col.shape = shape
+		body.add_child(col)
+		body.add_child(visual)
+		add_child(body)
+		return body
+	else:
+		var body := RigidBody3D.new()
+		body.name = "Prop_%s" % prop_id
+		body.mass = PROP_MASSES.get(prop_id, 15.0)
+		body.position = jittered_pos
+		body.rotation_degrees = jittered_rot
+		body.sleeping = true
+		body.can_sleep = true
+		var base_size: Vector3 = PROP_COLLISION_SIZES.get(prop_id, Vector3(0.6, 0.75, 0.6))
+		var col := CollisionShape3D.new()
+		var shape := BoxShape3D.new()
+		shape.size = base_size * scale_value
+		col.position = Vector3(0, base_size.y * scale_value.y * 0.5, 0)
+		col.shape = shape
+		body.add_child(col)
+		body.add_child(visual)
+		add_child(body)
+		return body
 
 func _add_unstable_architecture(palette: Array[Material]) -> void:
-	var seed: int = absi(grid_coord.x * 313 + grid_coord.y * 701 + biome * 997)
+	var cell_seed: int = absi(grid_coord.x * 313 + grid_coord.y * 701 + biome * 997)
 	var black := _material(Color(0.0, 0.0, 0.0, 0.62), 1.0)
 	black.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	if posmod(seed, 4) == 0:
+	# Deeper rooms collapse more
+	var collapse_chance := posmod(cell_seed, 4) == 0 or (depth_factor > 0.65 and posmod(cell_seed, 3) == 1)
+	if collapse_chance:
 		var panel := _add_box("LeaningFalseWall", Vector3(0.16, room_height * 0.72, 3.2), Vector3(-3.55, room_height * 0.36, 1.1), palette[0], true)
-		panel.rotation_degrees.z = -4.0 - float(posmod(seed, 5))
-	if posmod(seed, 5) == 1:
+		panel.rotation_degrees.z = -4.0 - float(posmod(cell_seed, 5))
+	if posmod(cell_seed, 5) == 1 or (depth_factor > 0.7 and posmod(cell_seed, 4) == 2):
 		var ceiling_sag := _add_box("SaggingCeilingMass", Vector3(4.2, 0.48, 2.2), Vector3(1.2, room_height - 0.38, -1.8), palette[2], false)
 		ceiling_sag.rotation_degrees.x = 3.0
-	if posmod(seed, 6) == 2:
+	if posmod(cell_seed, 6) == 2:
 		_add_box("ImpossibleBlackGap", Vector3(2.3, 0.035, 0.08), Vector3(-1.1, 0.05, 4.86), black, false)
-	if biome == 4 and posmod(seed, 3) == 0:
+	if biome == 4 and posmod(cell_seed, 3) == 0:
 		var tilted_shop := _add_box("TiltedShopFacade", Vector3(3.8, 2.7, 0.16), Vector3(-2.2, 1.35, 4.72), palette[0], true)
 		tilted_shop.rotation_degrees.z = 2.8
-	if biome == 5 and posmod(seed, 2) == 0:
+	if biome == 5 and posmod(cell_seed, 2) == 0:
 		var wrong_rail := _add_box("RailThatBlocksSight", Vector3(0.11, 0.11, 7.8), Vector3(-3.7, 1.25, 0), black, false)
 		wrong_rail.rotation_degrees.x = 8.0
 
 func _add_biome_geometry(palette: Array[Material]) -> void:
-	var variant := posmod(grid_coord.x * 31 + grid_coord.y * 17, 4)
+	var variant := posmod(grid_coord.x * 31 + grid_coord.y * 17, 6)
 	match biome:
 		0:
 			if variant == 0:
@@ -280,31 +455,92 @@ func _add_biome_geometry(palette: Array[Material]) -> void:
 				_add_box("OfficeColumnB", Vector3(0.58, 3.1, 0.58), Vector3(2.4, 1.55, 2.4), palette[0], true)
 			elif variant == 2:
 				_add_box("LongPartition", Vector3(0.16, 1.55, 5.4), Vector3(-1.8, 0.77, 0.6), palette[0], true)
-			else:
+			elif variant == 3:
 				_add_box("DroppedCeiling", Vector3(4.8, 0.35, 4.2), Vector3(1.8, room_height - 0.32, -1.7), palette[2], false)
+			elif variant == 4:
+				# Server room: rows of dead server racks
+				var rack := _material(Color(0.06, 0.065, 0.07), 0.38)
+				for x in [-2.5, 0.0, 2.5]:
+					_add_box("ServerRack", Vector3(0.6, 2.0, 0.85), Vector3(x, 1.0, -1.5), rack, true)
+					_add_box("ServerRackTop", Vector3(0.62, 0.06, 0.87), Vector3(x, 2.03, -1.5), _material(Color(0.02, 0.02, 0.02), 0.9), false)
+				_add_box("CableRun", Vector3(9.0, 0.14, 0.12), Vector3(0, room_height - 0.4, -1.5), _material(Color(0.04, 0.04, 0.04), 0.5), false)
+			else:
+				# Break room: long counter + overhead cabinet outlines
+				var counter_mat := _material(Color(0.16, 0.14, 0.11), 0.75)
+				_add_box("BreakCounter", Vector3(5.4, 0.88, 0.7), Vector3(0.3, 0.44, -4.0), counter_mat, true)
+				_add_box("WallCabinet", Vector3(5.0, 0.85, 0.45), Vector3(0.3, 2.2, -4.2), counter_mat, true)
+				_add_box("CabinetUnderline", Vector3(5.2, 0.03, 0.48), Vector3(0.3, 1.78, -4.18), _material(Color(0.02, 0.02, 0.02), 0.9), false)
 		1:
 			var water := _material(Color(0.08, 0.45, 0.54, 0.62), 0.08)
 			water.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-			_add_box("PoolWater", Vector3(8.8 if variant != 2 else 5.2, 0.04, 8.8), Vector3(0, 0.08, 0), water, false)
 			if variant == 0:
+				_add_box("PoolWater", Vector3(8.8, 0.04, 8.8), Vector3(0, 0.08, 0), water, false)
 				for corner in [Vector3(-3.8, 1.8, -3.8), Vector3(3.8, 1.8, -3.8), Vector3(-3.8, 1.8, 3.8), Vector3(3.8, 1.8, 3.8)]:
 					_add_box("PoolColumn", Vector3(0.52, 3.6, 0.52), corner, palette[0], true)
 			elif variant == 1:
+				_add_box("PoolWater", Vector3(8.8, 0.04, 8.8), Vector3(0, 0.08, 0), water, false)
 				_add_box("PoolBridge", Vector3(2.2, 0.18, 8.7), Vector3(-2.7, 0.12, 0), palette[1], true)
 			elif variant == 2:
+				_add_box("PoolWater", Vector3(5.2, 0.04, 8.8), Vector3(0, 0.08, 0), water, false)
 				_add_box("DryIsland", Vector3(3.5, 0.24, 3.5), Vector3(2.3, 0.12, -1.8), palette[1], true)
-			else:
+			elif variant == 3:
+				_add_box("PoolWater", Vector3(8.8, 0.04, 8.8), Vector3(0, 0.08, 0), water, false)
 				_add_box("LowPoolArch", Vector3(8.5, 0.52, 0.5), Vector3(0, 3.15, 0), palette[0], true)
+			elif variant == 4:
+				# Empty drained pool: cracked floor, no water
+				var crack := _material(Color(0.04, 0.04, 0.04, 0.7), 1.0)
+				crack.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+				_add_box("PoolBasin", Vector3(7.8, 0.35, 7.8), Vector3(0, -0.17, 0), palette[1], true)
+				for i in 5:
+					var cx := -2.0 + i * 1.0
+					_add_box("FloorCrack", Vector3(0.04, 0.025, 2.2 + i * 0.3), Vector3(cx, 0.015, float(i) * 0.5 - 1.0), crack, false)
+				# Pool depth markings (ghost of former use)
+				var mark := _emissive_material(Color(0.25, 0.55, 0.7), 0.2)
+				_add_box("DepthMark1m", Vector3(0.6, 0.04, 0.08), Vector3(-3.7, 0.65, 0.0), mark, false)
+			else:
+				# Flooded: water level at 0.6m — feels like you're wading
+				var deep_water := _material(Color(0.04, 0.28, 0.38, 0.72), 0.06)
+				deep_water.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+				_add_box("FloodWater", Vector3(9.6, 0.04, 9.6), Vector3(0, 0.6, 0), deep_water, false)
+				var flood_body := _material(Color(0.04, 0.22, 0.3, 0.45), 0.08)
+				flood_body.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+				_add_box("FloodBody", Vector3(9.6, 1.2, 9.6), Vector3(0, 0.0, 0), flood_body, false)
+				for cx in [-3.5, 3.5]:
+					_add_box("FloodColumn", Vector3(0.42, 0.6, 0.42), Vector3(cx, 0.3, 0.0), palette[0], true)
 		2:
 			var dark_wood := _material(Color(0.055, 0.028, 0.021), 0.9)
-			if variant % 2 == 0:
+			if variant == 0 or variant == 1:
+				var hz := variant % 2 == 0
+				if hz:
+					_add_box("ApartmentDivider", Vector3(4.4, 2.55, 0.18), Vector3(-2.8, 1.27, 2.35), palette[0], true)
+					_add_box("FalseApartmentDoor", Vector3(1.25, 2.35, 0.08), Vector3(-2.7, 1.17, 2.23), dark_wood, false)
+				else:
+					_add_box("ApartmentDivider", Vector3(0.18, 2.55, 4.8), Vector3(2.6, 1.27, -2.4), palette[0], true)
+					_add_box("FalseApartmentDoor", Vector3(0.08, 2.35, 1.25), Vector3(2.48, 1.17, -2.3), dark_wood, false)
+			elif variant == 2:
 				_add_box("ApartmentDivider", Vector3(4.4, 2.55, 0.18), Vector3(-2.8, 1.27, 2.35), palette[0], true)
 				_add_box("FalseApartmentDoor", Vector3(1.25, 2.35, 0.08), Vector3(-2.7, 1.17, 2.23), dark_wood, false)
-			else:
+				_add_box("AbandonedCounter", Vector3(2.4, 0.9, 0.7), Vector3(-1.4, 0.45, -2.6), dark_wood, true)
+			elif variant == 3:
 				_add_box("ApartmentDivider", Vector3(0.18, 2.55, 4.8), Vector3(2.6, 1.27, -2.4), palette[0], true)
 				_add_box("FalseApartmentDoor", Vector3(0.08, 2.35, 1.25), Vector3(2.48, 1.17, -2.3), dark_wood, false)
-			if variant == 3:
 				_add_box("AbandonedCounter", Vector3(2.4, 0.9, 0.7), Vector3(-1.4, 0.45, -2.6), dark_wood, true)
+			elif variant == 4:
+				# Kitchen: counter + stove outline + cabinet
+				_add_box("KitchenCounter", Vector3(4.8, 0.9, 0.7), Vector3(0.0, 0.45, -4.1), dark_wood, true)
+				_add_box("StoveOutline", Vector3(1.6, 0.06, 0.72), Vector3(-1.2, 0.93, -4.05), _material(Color(0.035, 0.035, 0.035), 0.3), false)
+				_add_box("StoveBurner", Vector3(0.35, 0.04, 0.35), Vector3(-1.5, 0.97, -4.05), _material(Color(0.02, 0.02, 0.02), 0.25), false)
+				_add_box("StoveBurner", Vector3(0.35, 0.04, 0.35), Vector3(-0.85, 0.97, -4.05), _material(Color(0.02, 0.02, 0.02), 0.25), false)
+				_add_box("KitchenCabinet", Vector3(4.8, 0.85, 0.42), Vector3(0.0, 2.25, -4.25), dark_wood, true)
+			else:
+				# Living room: low platform couch + TV stub
+				var fabric := _material(Color(0.08, 0.055, 0.048), 0.95)
+				_add_box("CouchBase", Vector3(3.2, 0.42, 0.95), Vector3(-0.5, 0.21, 1.8), fabric, true)
+				_add_box("CouchBack", Vector3(3.2, 0.65, 0.16), Vector3(-0.5, 0.74, 2.25), fabric, true)
+				_add_box("CouchArmL", Vector3(0.22, 0.55, 0.95), Vector3(-2.11, 0.48, 1.8), fabric, true)
+				_add_box("CouchArmR", Vector3(0.22, 0.55, 0.95), Vector3(1.11, 0.48, 1.8), fabric, true)
+				_add_box("TVStand", Vector3(1.4, 0.5, 0.42), Vector3(-0.5, 0.25, -3.6), dark_wood, true)
+				_add_box("TVScreen", Vector3(1.8, 1.05, 0.08), Vector3(-0.5, 1.0, -3.7), _material(Color(0.01, 0.01, 0.015), 0.06), false)
 		3:
 			var metal := _material(Color(0.035, 0.045, 0.04), 0.38)
 			if variant == 0 or variant == 2:
@@ -315,6 +551,19 @@ func _add_biome_geometry(palette: Array[Material]) -> void:
 				_add_box("ConcreteBeam", Vector3(10, 0.42, 0.48), Vector3(0, 2.92, 0), palette[2], true)
 			if variant == 3:
 				_add_box("MaintenanceBlock", Vector3(2.2, 2.1, 2.6), Vector3(3.4, 1.05, -2.8), palette[0], true)
+			elif variant == 4:
+				# Pump room: large central machinery
+				var machine_mat := _material(Color(0.055, 0.06, 0.055), 0.35)
+				_add_box("PumpBody", Vector3(2.4, 1.8, 1.6), Vector3(0.0, 0.9, 0.0), machine_mat, true)
+				_add_box("PumpTop", Vector3(2.5, 0.22, 1.7), Vector3(0.0, 1.91, 0.0), _material(Color(0.04, 0.04, 0.04), 0.4), true)
+				_add_box("PipeConnectH", Vector3(0.18, 0.18, 4.8), Vector3(-3.5, 2.1, 0.0), metal, false)
+				_add_box("PipeConnectV", Vector3(0.18, 1.8, 0.18), Vector3(1.2, 2.1, 2.2), metal, false)
+				_add_box("ValveWheel", Vector3(0.6, 0.08, 0.6), Vector3(-3.5, 2.5, -2.0), metal, false).rotation_degrees.x = 20.0
+			else:
+				# Pipe junction: 4 converging pipes
+				for axis_data in [[Vector3(0.22, 0.22, 9.0), Vector3(0, 1.8, 0)], [Vector3(9.0, 0.2, 0.2), Vector3(0, 2.4, 0)], [Vector3(0.16, 0.16, 7.0), Vector3(-2.0, 2.9, 0)], [Vector3(7.0, 0.16, 0.16), Vector3(0, 2.9, 2.0)]]:
+					_add_box("JunctionPipe", axis_data[0], axis_data[1], metal, false)
+				_add_box("JunctionBox", Vector3(0.55, 0.55, 0.55), Vector3(0.0, 1.8, 0.0), _material(Color(0.07, 0.08, 0.07), 0.4), true)
 		4:
 			var shutter := _material(Color(0.11, 0.105, 0.095), 0.55)
 			if variant <= 1:
@@ -323,8 +572,23 @@ func _add_biome_geometry(palette: Array[Material]) -> void:
 					_add_box("ShutterLine", Vector3(0.055, 3.2, 0.24), Vector3(x + 0.8, 1.65, -3.42), palette[2], false)
 			elif variant == 2:
 				_add_box("MallBench", Vector3(2.6, 0.34, 0.72), Vector3(-2.5, 0.48, 2.2), _material(Color(0.16, 0.09, 0.055), 0.72), true)
-			else:
+			elif variant == 3:
 				_add_box("DeadKiosk", Vector3(2.4, 1.15, 2.4), Vector3(2.5, 0.57, 1.5), shutter, true)
+			elif variant == 4:
+				# Food court: low tables cluster
+				var table_mat := _material(Color(0.18, 0.16, 0.13), 0.55)
+				for tx in [-2.5, 0.0, 2.5]:
+					_add_box("FoodTable", Vector3(1.2, 0.72, 0.8), Vector3(tx, 0.36, 1.5), table_mat, true)
+					_add_box("FoodTableTop", Vector3(1.4, 0.04, 1.0), Vector3(tx, 0.74, 1.5), _material(Color(0.12, 0.11, 0.09), 0.45), false)
+				_add_box("FoodCounter", Vector3(5.5, 1.1, 0.7), Vector3(0.0, 0.55, -3.6), shutter, true)
+				_add_box("CounterGuard", Vector3(5.5, 0.06, 0.72), Vector3(0.0, 1.13, -3.56), _material(Color(0.06, 0.06, 0.05), 0.4), false)
+			else:
+				# Broken escalator: stepped geometry
+				var step_mat := _material(Color(0.22, 0.2, 0.17), 0.48)
+				for step in 7:
+					_add_box("EscStep", Vector3(3.2, 0.18, 0.62), Vector3(-1.5, 0.09 + step * 0.38, -3.5 + step * 0.62), step_mat, true)
+				_add_box("EscSide", Vector3(0.18, 2.7, 5.2), Vector3(-3.1, 1.35, -0.5), palette[0], true)
+				_add_box("EscSide", Vector3(0.18, 2.7, 5.2), Vector3(0.1, 1.35, -0.5), palette[0], true)
 		5:
 			var concrete := palette[0]
 			if variant != 1:
@@ -335,6 +599,19 @@ func _add_biome_geometry(palette: Array[Material]) -> void:
 			if variant == 1:
 				_add_box("EmptyLanding", Vector3(4.6, 0.3, 4.6), Vector3(1.9, 0.15, 1.8), concrete, true)
 			_add_box("Handrail", Vector3(0.1, 0.1, 5.8), Vector3(3.25, 1.55, 0.2), _material(Color(0.04, 0.045, 0.05), 0.3), false)
+			if variant == 4:
+				# Observation platform: wide railed landing
+				_add_box("Platform", Vector3(6.5, 0.28, 3.8), Vector3(0.0, 0.14, -2.0), concrete, true)
+				for rail_x in [-3.2, 3.2]:
+					_add_box("PlatformRail", Vector3(0.08, 1.05, 3.8), Vector3(rail_x, 0.9, -2.0), _material(Color(0.04, 0.04, 0.05), 0.3), true)
+				_add_box("RailTop", Vector3(6.7, 0.08, 0.08), Vector3(0.0, 1.38, -2.0), _material(Color(0.04, 0.04, 0.05), 0.3), false)
+			elif variant == 5:
+				# Machine room: impossible gears and mechanisms
+				var gear_mat := _material(Color(0.065, 0.07, 0.075), 0.3)
+				_add_box("GearA", Vector3(2.2, 2.2, 0.22), Vector3(-1.8, 1.8, -3.5), gear_mat, false)
+				_add_box("GearB", Vector3(1.4, 1.4, 0.18), Vector3(1.2, 1.5, -3.5), gear_mat, false)
+				_add_box("GearShaft", Vector3(0.16, 0.16, 8.8), Vector3(-1.8, 1.8, 0.0), gear_mat, false)
+				_add_box("MachineBase", Vector3(3.2, 0.52, 2.6), Vector3(-1.8, 0.26, -2.8), palette[0], true)
 
 func _add_ceiling_rift() -> void:
 	var black := _material(Color(0.0, 0.0, 0.0), 1.0)
@@ -351,14 +628,88 @@ func _add_ceiling_rift() -> void:
 	trigger.add_child(collision)
 	add_child(trigger)
 
+func _add_atmosphere_effects() -> void:
+	var cell_seed: int = absi(grid_coord.x * 1117 + grid_coord.y * 2333 + biome * 4441)
+	# Dust motes — subtle floating particles in organic biomes
+	if biome in [0, 2, 4]:
+		var particles := CPUParticles3D.new()
+		particles.name = "DustMotes"
+		particles.amount = 18
+		particles.lifetime = 9.0
+		particles.explosiveness = 0.0
+		particles.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
+		particles.emission_box_extents = Vector3(4.2, 1.2, 4.2)
+		particles.position = Vector3(0, 1.85, 0)
+		particles.direction = Vector3(0.15 + float(posmod(cell_seed, 5)) * 0.04, 0.02, 0.08)
+		particles.spread = 55.0
+		particles.gravity = Vector3(0, -0.015, 0)
+		particles.initial_velocity_min = 0.04
+		particles.initial_velocity_max = 0.18
+		particles.scale_amount_min = 0.008
+		particles.scale_amount_max = 0.032
+		var dust_color: Color
+		if biome == 0: dust_color = Color(0.92, 0.86, 0.7, 0.35)
+		elif biome == 2: dust_color = Color(0.88, 0.62, 0.42, 0.30)
+		else: dust_color = Color(0.86, 0.78, 0.58, 0.28)
+		particles.color = dust_color
+		add_child(particles)
+	# Tunnel / Stairwell: drifting haze streaks
+	elif biome in [3, 5]:
+		var particles := CPUParticles3D.new()
+		particles.name = "HazeStreaks"
+		particles.amount = 10
+		particles.lifetime = 12.0
+		particles.explosiveness = 0.0
+		particles.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
+		particles.emission_box_extents = Vector3(4.5, 0.4, 4.5)
+		particles.position = Vector3(0, 1.2, 0)
+		particles.direction = Vector3(0.1, 0.0, 0.05)
+		particles.spread = 25.0
+		particles.gravity = Vector3.ZERO
+		particles.initial_velocity_min = 0.02
+		particles.initial_velocity_max = 0.08
+		particles.scale_amount_min = 0.04
+		particles.scale_amount_max = 0.12
+		particles.color = Color(0.3, 0.35, 0.32, 0.18)
+		add_child(particles)
+	# Floor mist layer — very thin, biome-tinted
+	var mist_density := 0.08 + depth_factor * 0.06
+	var mist_colors: Array[Color] = [
+		Color(0.32, 0.28, 0.18, mist_density),
+		Color(0.18, 0.42, 0.45, mist_density * 1.3),
+		Color(0.24, 0.14, 0.12, mist_density),
+		Color(0.12, 0.14, 0.12, mist_density * 0.8),
+		Color(0.28, 0.24, 0.18, mist_density),
+		Color(0.14, 0.16, 0.20, mist_density * 0.7),
+	]
+	var mist_mat := StandardMaterial3D.new()
+	mist_mat.albedo_color = mist_colors[biome]
+	mist_mat.roughness = 1.0
+	mist_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mist_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mist_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var mist_node := MeshInstance3D.new()
+	mist_node.name = "FloorMist"
+	var mist_mesh := BoxMesh.new()
+	mist_mesh.size = Vector3(9.6, 0.38, 9.6)
+	mist_mesh.material = mist_mat
+	mist_node.mesh = mist_mesh
+	mist_node.position = Vector3(0, 0.19, 0)
+	mist_node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(mist_node)
+
 func _add_room_light() -> void:
+	if biome == 0 and ceiling_rift:
+		_add_ceiling_rift()
+	var base_energies: Array[float] = [2.2, 2.7, 1.35, 1.15, 1.75, 1.2]
 	var light := FlickeringLight.new()
 	light.name = "BiomeLight"
 	light.add_to_group("liminal_lights")
 	light.position = Vector3(0, room_height - 0.45, 0)
 	light.omni_range = 9.5
 	light.light_color = [Color(1.0, 0.83, 0.47), Color(0.55, 0.88, 0.96), Color(0.72, 0.52, 0.4), Color(0.42, 0.56, 0.47), Color(0.86, 0.78, 0.62), Color(0.58, 0.66, 0.73)][biome]
-	light.base_energy = [2.2, 2.7, 1.35, 1.15, 1.75, 1.2][biome]
+	# Deeper rooms are dimmer — dread through darkness
+	light.base_energy = base_energies[biome] * (1.0 - depth_factor * 0.35)
 	light.shadow_enabled = true
 	add_child(light)
 

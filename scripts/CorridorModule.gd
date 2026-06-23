@@ -38,12 +38,16 @@ func _build() -> void:
 
 func _zone_materials() -> Array[Material]:
 	match zone_type:
-		1: # damp, overexposed poolrooms
+		1: # damp pool halls
 			return [_material(Color(0.48, 0.66, 0.64)), _material(Color(0.12, 0.38, 0.43), 0.42), _material(Color(0.66, 0.73, 0.67))]
-		2: # faded residential layer
+		2: # faded residential
 			return [_material(Color(0.25, 0.18, 0.16)), _material(Color(0.12, 0.085, 0.07)), _material(Color(0.28, 0.25, 0.23))]
 		3: # concrete underpass
 			return [_material(Color(0.17, 0.18, 0.17)), _material(Color(0.07, 0.075, 0.07)), _material(Color(0.12, 0.13, 0.12))]
+		4: # dead mall — pale neutral, wide
+			return [_material(Color(0.31, 0.285, 0.25)), _material(Color(0.18, 0.175, 0.16), 0.38), _material(Color(0.42, 0.4, 0.35))]
+		5: # stairwell — cold concrete
+			return [_material(Color(0.19, 0.205, 0.21)), _material(Color(0.075, 0.08, 0.085)), _material(Color(0.13, 0.14, 0.15))]
 		_:
 			return [WALL, FLOOR, CEILING]
 
@@ -104,7 +108,7 @@ func _add_light(pos: Vector3, unstable: bool) -> void:
 	light.name = "FlickeringLight"
 	light.position = pos
 	light.omni_range = 8.5
-	light.light_color = [Color(1.0, 0.83, 0.47), Color(0.62, 0.9, 0.95), Color(0.78, 0.63, 0.51), Color(0.56, 0.63, 0.57)][zone_type]
+	light.light_color = [Color(1.0, 0.83, 0.47), Color(0.62, 0.9, 0.95), Color(0.78, 0.63, 0.51), Color(0.56, 0.63, 0.57), Color(0.86, 0.78, 0.62), Color(0.58, 0.66, 0.73)][mini(zone_type, 5)]
 	light.shadow_enabled = true
 	light.base_energy = 2.2
 	light.random_flicker = unstable

@@ -12,11 +12,11 @@ config_version=5
 
 config/name="Underworld"
 run/main_scene="res://scenes/Intro.tscn"
-config/features=PackedStringArray("4.6")
+config/features=PackedStringArray("4.7")
 
 [autoload]
 
-MCPRuntime="*res://addons/godot_mcp_runtime/mcp_runtime_autoload.gd"
+MCPRuntime="*uid://c6h0mrylm1vnd"
 
 [display]
 

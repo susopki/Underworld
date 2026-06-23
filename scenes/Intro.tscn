@@ -1,22 +1,12 @@
-[gd_scene load_steps=14 format=3]
+[gd_scene format=3 uid="uid://bj01uybc7mq4o"]
 
-[ext_resource type="Script" path="res://scripts/IntroController.gd" id="1"]
-[ext_resource type="Shader" path="res://shaders/intro_monochrome.gdshader" id="2"]
+[ext_resource type="Script" uid="uid://d370evlt86l47" path="res://scripts/IntroController.gd" id="1"]
+[ext_resource type="Shader" uid="uid://p2crpgiw8cff" path="res://shaders/intro_monochrome.gdshader" id="2"]
 [ext_resource type="Material" path="res://materials/cloud_window.tres" id="3"]
 
 [sub_resource type="StandardMaterial3D" id="RoomMaterial"]
 albedo_color = Color(0.42, 0.42, 0.42, 1)
 roughness = 0.82
-
-[sub_resource type="StandardMaterial3D" id="BlackMaterial"]
-albedo_color = Color(0, 0, 0, 1)
-roughness = 1.0
-
-[sub_resource type="StandardMaterial3D" id="GlowMaterial"]
-albedo_color = Color(0.8, 0.8, 0.8, 1)
-emission_enabled = true
-emission = Color(2.5, 2.5, 2.5, 1)
-emission_energy_multiplier = 4.0
 
 [sub_resource type="BoxMesh" id="FloorMesh"]
 material = SubResource("RoomMaterial")
@@ -26,106 +16,113 @@ size = Vector3(12, 0.2, 20)
 material = SubResource("RoomMaterial")
 size = Vector3(0.2, 6, 20)
 
+[sub_resource type="BoxMesh" id="LobbyWindowMesh"]
+material = ExtResource("3")
+size = Vector3(0.05, 2.25, 5.6)
+
 [sub_resource type="BoxMesh" id="BackWallMesh"]
 material = SubResource("RoomMaterial")
 size = Vector3(12, 6, 0.2)
+
+[sub_resource type="StandardMaterial3D" id="BlackMaterial"]
+albedo_color = Color(0, 0, 0, 1)
 
 [sub_resource type="BoxMesh" id="EntranceMesh"]
 material = SubResource("BlackMaterial")
 size = Vector3(3.4, 4.3, 0.32)
 
+[sub_resource type="StandardMaterial3D" id="GlowMaterial"]
+albedo_color = Color(0.8, 0.8, 0.8, 1)
+emission_enabled = true
+emission = Color(2.5, 2.5, 2.5, 1)
+emission_energy_multiplier = 4.0
+
 [sub_resource type="BoxMesh" id="GlowStripMesh"]
 material = SubResource("GlowMaterial")
 size = Vector3(0.13, 4.7, 0.16)
-
-[sub_resource type="BoxMesh" id="LobbyWindowMesh"]
-material = ExtResource("3")
-size = Vector3(0.05, 2.25, 5.6)
 
 [sub_resource type="ShaderMaterial" id="MonochromeMaterial"]
 shader = ExtResource("2")
 shader_parameter/fade = 0.0
 shader_parameter/proximity = 0.0
 
-[node name="Intro" type="Node3D"]
+[node name="Intro" type="Node3D" unique_id=57217914]
 script = ExtResource("1")
 
-[node name="Floor" type="MeshInstance3D" parent="."]
-position = Vector3(0, -0.1, 0)
+[node name="Floor" type="MeshInstance3D" parent="." unique_id=852798277]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
 mesh = SubResource("FloorMesh")
 
-[node name="Ceiling" type="MeshInstance3D" parent="."]
-position = Vector3(0, 5.9, 0)
+[node name="Ceiling" type="MeshInstance3D" parent="." unique_id=1330172058]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.9, 0)
 mesh = SubResource("FloorMesh")
 
-[node name="LeftWall" type="MeshInstance3D" parent="."]
-position = Vector3(-6, 2.9, 0)
+[node name="LeftWall" type="MeshInstance3D" parent="." unique_id=1042433155]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 2.9, 0)
 mesh = SubResource("SideWallMesh")
 
-[node name="RightWall" type="MeshInstance3D" parent="."]
-position = Vector3(6, 2.9, 0)
+[node name="RightWall" type="MeshInstance3D" parent="." unique_id=159258559]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 2.9, 0)
 mesh = SubResource("SideWallMesh")
 
-[node name="CloudWindowLeftFront" type="MeshInstance3D" parent="."]
-position = Vector3(-5.88, 2.35, 3.4)
+[node name="CloudWindowLeftFront" type="MeshInstance3D" parent="." unique_id=329727072]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.88, 2.35, 3.4)
 mesh = SubResource("LobbyWindowMesh")
 
-[node name="CloudWindowLeftBack" type="MeshInstance3D" parent="."]
-position = Vector3(-5.88, 2.35, -3.5)
+[node name="CloudWindowLeftBack" type="MeshInstance3D" parent="." unique_id=1862270839]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.88, 2.35, -3.5)
 mesh = SubResource("LobbyWindowMesh")
 
-[node name="CloudWindowRightFront" type="MeshInstance3D" parent="."]
-position = Vector3(5.88, 2.35, 3.4)
+[node name="CloudWindowRightFront" type="MeshInstance3D" parent="." unique_id=1779357803]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.88, 2.35, 3.4)
 mesh = SubResource("LobbyWindowMesh")
 
-[node name="CloudWindowRightBack" type="MeshInstance3D" parent="."]
-position = Vector3(5.88, 2.35, -3.5)
+[node name="CloudWindowRightBack" type="MeshInstance3D" parent="." unique_id=1406994654]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.88, 2.35, -3.5)
 mesh = SubResource("LobbyWindowMesh")
 
-[node name="BackWall" type="MeshInstance3D" parent="."]
-position = Vector3(0, 2.9, -10)
+[node name="BackWall" type="MeshInstance3D" parent="." unique_id=1878149772]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.9, -10)
 mesh = SubResource("BackWallMesh")
 
-[node name="Entrance" type="MeshInstance3D" parent="."]
-position = Vector3(0, 2.15, -9.86)
+[node name="Entrance" type="MeshInstance3D" parent="." unique_id=1893551530]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.15, -9.86)
 mesh = SubResource("EntranceMesh")
 
-[node name="GlowLeft" type="MeshInstance3D" parent="."]
-position = Vector3(-1.78, 2.15, -9.65)
+[node name="GlowLeft" type="MeshInstance3D" parent="." unique_id=1021223135]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.78, 2.15, -9.65)
 mesh = SubResource("GlowStripMesh")
 
-[node name="GlowRight" type="MeshInstance3D" parent="."]
-position = Vector3(1.78, 2.15, -9.65)
+[node name="GlowRight" type="MeshInstance3D" parent="." unique_id=1715066193]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.78, 2.15, -9.65)
 mesh = SubResource("GlowStripMesh")
 
-[node name="GlowTop" type="MeshInstance3D" parent="."]
-position = Vector3(0, 4.48, -9.65)
-rotation = Vector3(0, 0, 1.5708)
-scale = Vector3(1, 0.76, 1)
+[node name="GlowTop" type="MeshInstance3D" parent="." unique_id=254974157]
+transform = Transform3D(-3.6199901e-06, -0.76, 0, 1, -2.7511924e-06, 0, 0, 0, 1, 0, 4.48, -9.65)
 mesh = SubResource("GlowStripMesh")
 
-[node name="EntranceLight" type="OmniLight3D" parent="."]
-position = Vector3(0, 2.5, -7.5)
+[node name="EntranceLight" type="OmniLight3D" parent="." unique_id=711196131]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.5, -7.5)
 light_color = Color(0.82, 0.82, 0.82, 1)
 light_energy = 1.5
-omni_range = 9.0
 shadow_enabled = true
+omni_range = 9.0
 
-[node name="ColdRoomLight" type="DirectionalLight3D" parent="."]
-rotation = Vector3(-0.72, -0.38, 0)
+[node name="ColdRoomLight" type="DirectionalLight3D" parent="." unique_id=1283578202]
+transform = Transform3D(0.9286646, 0.24457927, -0.27886015, 0, 0.7518057, 0.65938467, 0.37092048, -0.6123472, 0.6981754, 0, 0, 0)
 light_color = Color(0.52, 0.55, 0.59, 1)
 light_energy = 0.42
 shadow_enabled = true
 
-[node name="Camera3D" type="Camera3D" parent="."]
-position = Vector3(0, 2.0, 7.2)
+[node name="Camera3D" type="Camera3D" parent="." unique_id=975134981]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 7.2)
 current = true
 fov = 63.0
 
-[node name="PostProcess" type="CanvasLayer" parent="."]
+[node name="PostProcess" type="CanvasLayer" parent="." unique_id=1323725746]
 layer = 20
 
-[node name="Monochrome" type="ColorRect" parent="PostProcess"]
+[node name="Monochrome" type="ColorRect" parent="PostProcess" unique_id=133249006]
 material = SubResource("MonochromeMaterial")
 anchors_preset = 15
 anchor_right = 1.0
@@ -134,10 +131,10 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Interface" type="CanvasLayer" parent="."]
+[node name="Interface" type="CanvasLayer" parent="." unique_id=1331759225]
 layer = 30
 
-[node name="Title" type="Label" parent="Interface"]
+[node name="Title" type="Label" parent="Interface" unique_id=1881686306]
 anchors_preset = 10
 anchor_right = 1.0
 offset_top = 74.0
@@ -151,8 +148,8 @@ theme_override_font_sizes/font_size = 48
 text = "U N D E R W O R L D"
 horizontal_alignment = 1
 
-[node name="Prompt" type="Label" parent="Interface"]
-anchors_preset = 12
+[node name="Prompt" type="Label" parent="Interface" unique_id=596637807]
+anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 offset_top = -104.0
