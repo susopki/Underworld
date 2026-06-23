@@ -1,0 +1,5 @@
+metal_office_desk
+Source: https://polyhaven.com/a/metal_office_desk
+API: https://api.polyhaven.com/files/metal_office_desk
+License: CC0 / Public Domain via Poly Haven.
+Resolution: 1k

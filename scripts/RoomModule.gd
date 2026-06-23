@@ -2,6 +2,13 @@ class_name RoomModule
 extends Node3D
 
 const CLOUDS := preload("res://materials/cloud_window.tres")
+const EXTERNAL_PROPS := {
+	"desk": "res://assets/models/polyhaven/metal_office_desk/metal_office_desk_1k.gltf",
+	"shelf": "res://assets/models/polyhaven/Shelf_01/Shelf_01_1k.gltf",
+	"box": "res://assets/models/polyhaven/cardboard_box_01/cardboard_box_01_1k.gltf",
+	"trash": "res://assets/models/polyhaven/metal_trash_can/metal_trash_can_1k.gltf",
+	"door": "res://assets/models/polyhaven/large_castle_door/large_castle_door_1k.gltf",
+}
 @export var biome := 0
 @export var openings := 0
 @export var grid_coord := Vector2i.ZERO
@@ -25,6 +32,7 @@ func _build_room() -> void:
 	_add_ceiling_fixture()
 	_add_depth_cues(palette)
 	_add_biome_geometry(palette)
+	_add_external_downloaded_props()
 	_add_uncanny_props(palette)
 	_add_unstable_architecture(palette)
 	_add_room_light()
@@ -190,6 +198,56 @@ func _add_uncanny_props(palette: Array[Material]) -> void:
 			_add_box("WrongFloorNumber", Vector3(0.58, 0.42, 0.04), Vector3(-4.88, 2.15, 0.9), red_dim if posmod(seed, 5) == 0 else dark, false)
 			if posmod(seed, 3) == 2:
 				_add_box("VerticalVoidSlit", Vector3(0.05, 3.4, 0.55), Vector3(4.88, 1.9, -2.4), dark, false)
+
+func _add_external_downloaded_props() -> void:
+	var seed: int = absi(grid_coord.x * 409 + grid_coord.y * 887 + biome * 1999)
+	match biome:
+		0:
+			if posmod(seed, 2) == 0:
+				_spawn_external_model("desk", Vector3(-2.65, 0.02, -2.7), Vector3.ONE * 1.18, Vector3(0, 90, 0))
+				_spawn_external_model("trash", Vector3(2.95, 0.02, -3.15), Vector3.ONE * 0.82, Vector3.ZERO)
+			else:
+				_spawn_external_model("shelf", Vector3(3.88, 0.02, 1.9), Vector3.ONE * 1.28, Vector3(0, -90, 0))
+			if posmod(seed, 5) == 3:
+				_spawn_external_model("door", Vector3(0.0, 0.03, 4.54), Vector3(1.35, 1.35, 1.15), Vector3(0, 180, 0))
+		1:
+			if posmod(seed, 3) == 1:
+				_spawn_external_model("trash", Vector3(-4.0, 0.04, 3.15), Vector3.ONE * 0.9, Vector3(0, 25, 0))
+		2:
+			if posmod(seed, 2) == 0:
+				_spawn_external_model("door", Vector3(-2.7, 0.03, 2.18), Vector3(1.05, 1.1, 0.9), Vector3(0, 0, 0))
+			else:
+				_spawn_external_model("box", Vector3(-3.15, 0.03, -3.0), Vector3.ONE * 1.05, Vector3(0, 17, 0))
+		3:
+			_spawn_external_model("trash", Vector3(3.95, 0.03, -2.85), Vector3.ONE * 0.85, Vector3(0, -20, 0))
+			if posmod(seed, 4) == 0:
+				_spawn_external_model("box", Vector3(-3.35, 0.04, 2.7), Vector3.ONE * 0.9, Vector3(0, 37, 0))
+		4:
+			if posmod(seed, 3) != 0:
+				_spawn_external_model("shelf", Vector3(-3.65, 0.03, -1.2), Vector3.ONE * 1.15, Vector3(0, 90, 0))
+				_spawn_external_model("box", Vector3(2.8, 0.04, 2.85), Vector3.ONE * 0.85, Vector3(0, -12, 0))
+		5:
+			if posmod(seed, 2) == 1:
+				_spawn_external_model("door", Vector3(4.45, 0.03, -2.2), Vector3(1.0, 1.08, 0.9), Vector3(0, -90, 0))
+
+func _spawn_external_model(prop_id: String, pos: Vector3, scale_value: Vector3, rotation_deg: Vector3) -> Node3D:
+	var path: String = EXTERNAL_PROPS.get(prop_id, "")
+	if path.is_empty() or not ResourceLoader.exists(path):
+		return null
+	var resource := load(path)
+	if resource == null or not resource is PackedScene:
+		return null
+	var instance := (resource as PackedScene).instantiate()
+	if not instance is Node3D:
+		instance.queue_free()
+		return null
+	var node := instance as Node3D
+	node.name = "DownloadedProp_%s" % prop_id
+	node.position = pos
+	node.scale = scale_value
+	node.rotation_degrees = rotation_deg
+	add_child(node)
+	return node
 
 func _add_unstable_architecture(palette: Array[Material]) -> void:
 	var seed: int = absi(grid_coord.x * 313 + grid_coord.y * 701 + biome * 997)

@@ -1,0 +1,5 @@
+metal_trash_can
+Source: https://polyhaven.com/a/metal_trash_can
+API: https://api.polyhaven.com/files/metal_trash_can
+License: CC0 / Public Domain via Poly Haven.
+Resolution: 1k
