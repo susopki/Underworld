@@ -60,10 +60,18 @@ func _material(color: Color, roughness := 0.9) -> StandardMaterial3D:
 func _add_zone_details(wall_mat: Material, floor_mat: Material) -> void:
 	match zone_type:
 		1:
-			# A shallow reflective strip reads as motionless water.
-			var water := _material(Color(0.18, 0.55, 0.62, 0.58), 0.12)
-			water.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-			_add_box("StillWater", Vector3(5.65, 0.035, module_length - 0.3), Vector3(0, 0.025, -module_length * 0.5), water, false)
+			# Optimized water surface (shared shader, shadows off) running the corridor.
+			var water_node := MeshInstance3D.new()
+			water_node.name = "StillWater"
+			var plane := PlaneMesh.new()
+			plane.size = Vector2(5.65, module_length - 0.3)
+			water_node.mesh = plane
+			var water_mat := ShaderMaterial.new()
+			water_mat.shader = load("res://shaders/water.gdshader")
+			water_node.material_override = water_mat
+			water_node.position = Vector3(0, 0.04, -module_length * 0.5)
+			water_node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			add_child(water_node)
 		2:
 			# Doors are only architectural shapes; none can be opened or collected from.
 			var door := _material(Color(0.055, 0.035, 0.03), 1.0)

@@ -23,12 +23,19 @@ const EXTERNAL_PROPS := {
 	"radio":       "res://assets/models/polyhaven/vintage_radio_transceiver/vintage_radio_transceiver_1k.gltf",
 	"stool":       "res://assets/models/polyhaven/metal_stool_01/metal_stool_01_1k.gltf",
 	"spray":       "res://assets/models/polyhaven/spray_paint_bottles/spray_paint_bottles_1k.gltf",
+	"potted_plant":"res://assets/models/polyhaven/potted_plant_01/potted_plant_01_1k.gltf",
+	"bench":       "res://assets/models/polyhaven/painted_wooden_bench/painted_wooden_bench_1k.gltf",
+	"cash_register":"res://assets/models/polyhaven/CashRegister_01/CashRegister_01_1k.gltf",
+	"coffee_cart": "res://assets/models/polyhaven/CoffeeCart_01/CoffeeCart_01_1k.gltf",
+	"shop_shutter":"res://assets/models/polyhaven/rollershutter_door/rollershutter_door_1k.gltf",
+	"retail_rack": "res://assets/models/polyhaven/worn_metal_rack/worn_metal_rack_1k.gltf",
 }
 # mass in kg — heavy props resist being knocked over
 const PROP_MASSES := {
 	"desk": 65.0, "shelf": 40.0, "box": 7.0, "trash": 10.0, "door": 90.0,
 	"chair": 8.0, "barrel": 32.0, "table": 28.0, "wet_sign": 3.0, "armchair": 22.0, "crowbar": 4.0,
-	"laptop": 2.5, "cat_statue": 18.0, "ladder": 12.0, "monobloc": 5.0, "extinguisher": 6.0, "bleach": 1.5, "radio": 8.0, "stool": 7.0, "spray": 1.0
+	"laptop": 2.5, "cat_statue": 18.0, "ladder": 12.0, "monobloc": 5.0, "extinguisher": 6.0, "bleach": 1.5, "radio": 8.0, "stool": 7.0, "spray": 1.0,
+	"potted_plant": 14.0, "bench": 24.0, "cash_register": 9.0, "coffee_cart": 60.0, "shop_shutter": 50.0, "retail_rack": 30.0
 }
 # approximate collision box sizes in metres (unscaled)
 const PROP_COLLISION_SIZES := {
@@ -42,12 +49,18 @@ const PROP_COLLISION_SIZES := {
 	"monobloc": Vector3(0.45, 0.85, 0.45), "extinguisher": Vector3(0.22, 0.55, 0.22),
 	"bleach": Vector3(0.12, 0.28, 0.12), "radio": Vector3(0.38, 0.18, 0.28),
 	"stool": Vector3(0.35, 0.55, 0.35), "spray": Vector3(0.18, 0.16, 0.18),
+	"potted_plant": Vector3(0.59, 1.34, 0.63), "bench": Vector3(1.16, 0.89, 0.50),
+	"cash_register": Vector3(0.60, 0.62, 0.44), "coffee_cart": Vector3(2.17, 1.72, 1.07),
+	"shop_shutter": Vector3(1.08, 2.40, 0.30), "retail_rack": Vector3(0.92, 1.90, 0.60),
 }
 
 # Large props that should NOT have physics (block doorways when fallen)
 const STATIC_PROPS := [
 	"ladder",
 	"shelf",
+	"coffee_cart",
+	"shop_shutter",
+	"retail_rack",
 ]
 # Real downloaded crash sounds (first that exists wins; falls back to synthesis)
 const COLLAPSE_SOUNDS := ["res://audio/collapse.ogg", "res://audio/collapse.wav", "res://audio/collapse.mp3"]
@@ -200,18 +213,8 @@ func _add_ceiling_fixture() -> void:
 				_add_box("LightCageBars", Vector3(0.035, 0.5, 0.035), Vector3(x, room_height - 0.54, 0.42), casing, false)
 
 func _add_depth_cues(_palette_unused: Array[Material]) -> void:
-	var darkness := _material(Color(0.0, 0.0, 0.0, 0.34), 1.0)
-	darkness.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	var cell_seed: int = absi(grid_coord.x * 13 + grid_coord.y * 29 + biome * 47)
-	if posmod(cell_seed, 3) == 0:
-		_add_box("NearBlackCorner", Vector3(1.8, 2.2, 0.04), Vector3(-4.91, 1.1, -3.9), darkness, false)
-	if posmod(cell_seed, 4) == 1:
-		_add_box("WrongShadowPatch", Vector3(2.4, 0.03, 1.4), Vector3(2.1, 0.021, -2.9), darkness, false)
-	# Extra darkness overlay for deep rooms
-	if depth_factor > 0.6:
-		var deep_dark := _material(Color(0.0, 0.0, 0.0, 0.18 * depth_factor), 1.0)
-		deep_dark.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		_add_box("DeepRoomFog", Vector3(room_size - 0.1, room_height - 0.1, room_size - 0.1), Vector3(0, room_height * 0.5, 0), deep_dark, false)
+	# Dark transparent overlay panels removed — they cluttered doorways and over-darkened rooms.
+	pass
 
 func _add_uncanny_props(palette: Array[Material]) -> void:
 	var cell_seed: int = absi(grid_coord.x * 91 + grid_coord.y * 127 + biome * 503)
@@ -334,24 +337,27 @@ func _add_external_downloaded_props() -> void:
 				_spawn_external_model("stool", Vector3(4.5, 0.02, 3.4), Vector3.ONE * 0.95, Vector3(0, 180, 0))
 		4:
 			if cluster == 0:
-				# Mall shelf display + cat statue as decoration
-				_spawn_external_model("shelf",     Vector3(-3.65, 0.03, -1.2), Vector3.ONE * 1.15, Vector3(0, 90, 0))
-				_spawn_external_model("box",       Vector3(-3.1,  0.04,  0.5), Vector3.ONE * 0.82, Vector3(0, -12, 0))
-				_spawn_external_model("wet_sign",  Vector3(-2.2,  0.03,  1.6), Vector3.ONE * 0.95, Vector3(0, 25, 0))
+				# Storefront: worn retail rack + shop shelf + planter
+				_spawn_external_model("retail_rack", Vector3(-3.95, 0.02, -1.2), Vector3.ONE * 1.0, Vector3(0, 90, 0))
+				_spawn_external_model("shelf",       Vector3(-3.65, 0.03,  1.6), Vector3.ONE * 1.15, Vector3(0, 90, 0))
+				_spawn_external_model("potted_plant",Vector3(-2.2,  0.02, -3.6), Vector3.ONE * 1.0, Vector3(0, 0, 0))
 				if posmod(cell_seed, 2) == 0:
 					_spawn_external_model("cat_statue", Vector3(-1.0, 0.03, -3.8), Vector3.ONE * 0.9, Vector3(0, 45, 0))
 			elif cluster == 1:
-				# Seating zone: armchair + table
-				_spawn_external_model("armchair", Vector3(2.4,  0.02,  2.1), Vector3.ONE * 1.1,  Vector3(0, -50, 0))
-				_spawn_external_model("table",    Vector3(3.7,  0.02,  1.5), Vector3.ONE * 1.0,  Vector3(0, 0, 0))
+				# Food-court seating: bench + coffee cart kiosk + planter
+				_spawn_external_model("bench",       Vector3(2.4,  0.02,  2.1), Vector3.ONE * 1.0, Vector3(0, -50, 0))
+				_spawn_external_model("coffee_cart", Vector3(3.4,  0.02, -2.4), Vector3.ONE * 1.0, Vector3(0, 150, 0))
+				_spawn_external_model("potted_plant",Vector3(1.2,  0.02,  3.8), Vector3.ONE * 1.0, Vector3(0, 0, 0))
 			else:
-				_spawn_external_model("shelf",    Vector3(2.8,  0.03, -2.5), Vector3.ONE * 1.15, Vector3(0, -90, 0))
-				_spawn_external_model("box",      Vector3(2.0,  0.04, -3.3), Vector3.ONE * 0.85, Vector3(0, 10, 0))
+				# Checkout counter: register + rack + box
+				_spawn_external_model("cash_register", Vector3(2.6, 0.03, -2.2), Vector3.ONE * 1.0, Vector3(0, -90, 0))
+				_spawn_external_model("retail_rack",   Vector3(3.9, 0.02, -1.0), Vector3.ONE * 1.0, Vector3(0, -90, 0))
+				_spawn_external_model("box",           Vector3(2.0, 0.04, -3.3), Vector3.ONE * 0.85, Vector3(0, 10, 0))
 			# Mall extras
+			if posmod(cell_seed, 2) == 0:
+				_spawn_external_model("shop_shutter", Vector3(-4.78, 0.0, 2.4), Vector3.ONE * 1.0, Vector3(0, 90, 0))
 			if posmod(cell_seed, 3) == 0:
 				_spawn_external_model("monobloc", Vector3(-3.5, 0.02, 2.8), Vector3.ONE * 1.0, Vector3(0, 15, 0))
-			if posmod(cell_seed, 5) == 2:
-				_spawn_external_model("stool", Vector3(1.8, 0.02, -2.8), Vector3.ONE * 1.0, Vector3(0, -75, 0))
 		5:
 			if posmod(cell_seed, 2) == 1:
 				_spawn_external_model("door",    Vector3(4.45, 0.03, -2.2), Vector3(1.0, 1.08, 0.9), Vector3(0, -90, 0))
@@ -428,8 +434,6 @@ func _spawn_external_model(prop_id: String, pos: Vector3, scale_value: Vector3, 
 
 func _add_unstable_architecture(palette: Array[Material]) -> void:
 	var cell_seed: int = absi(grid_coord.x * 313 + grid_coord.y * 701 + biome * 997)
-	var black := _material(Color(0.0, 0.0, 0.0, 0.62), 1.0)
-	black.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	# Deeper rooms collapse more
 	var collapse_chance := posmod(cell_seed, 4) == 0 or (depth_factor > 0.65 and posmod(cell_seed, 3) == 1)
 	if collapse_chance:
@@ -438,14 +442,9 @@ func _add_unstable_architecture(palette: Array[Material]) -> void:
 	if posmod(cell_seed, 5) == 1 or (depth_factor > 0.7 and posmod(cell_seed, 4) == 2):
 		var ceiling_sag := _add_box("SaggingCeilingMass", Vector3(4.2, 0.48, 2.2), Vector3(1.2, room_height - 0.38, -1.8), palette[2], false)
 		ceiling_sag.rotation_degrees.x = 3.0
-	if posmod(cell_seed, 6) == 2:
-		_add_box("ImpossibleBlackGap", Vector3(2.3, 0.035, 0.08), Vector3(-1.1, 0.05, 4.86), black, false)
 	if biome == 4 and posmod(cell_seed, 3) == 0:
 		var tilted_shop := _add_box("TiltedShopFacade", Vector3(3.8, 2.7, 0.16), Vector3(-2.2, 1.35, 4.72), palette[0], true)
 		tilted_shop.rotation_degrees.z = 2.8
-	if biome == 5 and posmod(cell_seed, 2) == 0:
-		var wrong_rail := _add_box("RailThatBlocksSight", Vector3(0.11, 0.11, 7.8), Vector3(-3.7, 1.25, 0), black, false)
-		wrong_rail.rotation_degrees.x = 8.0
 
 func _add_biome_geometry(palette: Array[Material]) -> void:
 	var variant := posmod(grid_coord.x * 31 + grid_coord.y * 17, 6)
@@ -475,20 +474,18 @@ func _add_biome_geometry(palette: Array[Material]) -> void:
 				_add_box("WallCabinet", Vector3(5.0, 0.85, 0.45), Vector3(0.3, 2.2, -4.2), counter_mat, true)
 				_add_box("CabinetUnderline", Vector3(5.2, 0.03, 0.48), Vector3(0.3, 1.78, -4.18), _material(Color(0.02, 0.02, 0.02), 0.9), false)
 		1:
-			var water := _material(Color(0.08, 0.45, 0.54, 0.62), 0.08)
-			water.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 			if variant == 0:
-				_add_box("PoolWater", Vector3(8.8, 0.04, 8.8), Vector3(0, 0.08, 0), water, false)
+				_add_water("PoolWater", 8.8, 8.8, 0.1)
 				for corner in [Vector3(-3.8, 1.8, -3.8), Vector3(3.8, 1.8, -3.8), Vector3(-3.8, 1.8, 3.8), Vector3(3.8, 1.8, 3.8)]:
 					_add_box("PoolColumn", Vector3(0.52, 3.6, 0.52), corner, palette[0], true)
 			elif variant == 1:
-				_add_box("PoolWater", Vector3(8.8, 0.04, 8.8), Vector3(0, 0.08, 0), water, false)
+				_add_water("PoolWater", 8.8, 8.8, 0.1)
 				_add_box("PoolBridge", Vector3(2.2, 0.18, 8.7), Vector3(-2.7, 0.12, 0), palette[1], true)
 			elif variant == 2:
-				_add_box("PoolWater", Vector3(5.2, 0.04, 8.8), Vector3(0, 0.08, 0), water, false)
+				_add_water("PoolWater", 5.2, 8.8, 0.1)
 				_add_box("DryIsland", Vector3(3.5, 0.24, 3.5), Vector3(2.3, 0.12, -1.8), palette[1], true)
 			elif variant == 3:
-				_add_box("PoolWater", Vector3(8.8, 0.04, 8.8), Vector3(0, 0.08, 0), water, false)
+				_add_water("PoolWater", 8.8, 8.8, 0.1)
 				_add_box("LowPoolArch", Vector3(8.5, 0.52, 0.5), Vector3(0, 3.15, 0), palette[0], true)
 			elif variant == 4:
 				# Empty drained pool: cracked floor, no water
@@ -502,13 +499,8 @@ func _add_biome_geometry(palette: Array[Material]) -> void:
 				var mark := _emissive_material(Color(0.25, 0.55, 0.7), 0.2)
 				_add_box("DepthMark1m", Vector3(0.6, 0.04, 0.08), Vector3(-3.7, 0.65, 0.0), mark, false)
 			else:
-				# Flooded: water level at 0.6m — feels like you're wading
-				var deep_water := _material(Color(0.04, 0.28, 0.38, 0.72), 0.06)
-				deep_water.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-				_add_box("FloodWater", Vector3(9.6, 0.04, 9.6), Vector3(0, 0.6, 0), deep_water, false)
-				var flood_body := _material(Color(0.04, 0.22, 0.3, 0.45), 0.08)
-				flood_body.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-				_add_box("FloodBody", Vector3(9.6, 1.2, 9.6), Vector3(0, 0.0, 0), flood_body, false)
+				# Flooded: single water surface at 0.6m — feels like you're wading
+				_add_water("FloodWater", 9.6, 9.6, 0.6)
 				for cx in [-3.5, 3.5]:
 					_add_box("FloodColumn", Vector3(0.42, 0.6, 0.42), Vector3(cx, 0.3, 0.0), palette[0], true)
 		2:
@@ -705,7 +697,7 @@ func _add_atmosphere_effects() -> void:
 func _add_room_light() -> void:
 	if biome == 0 and ceiling_rift:
 		_add_ceiling_rift()
-	var base_energies: Array[float] = [2.2, 2.7, 1.35, 1.15, 1.75, 1.2]
+	var base_energies: Array[float] = [2.2, 2.7, 1.8, 1.75, 1.85, 1.8]
 	var light := FlickeringLight.new()
 	light.name = "BiomeLight"
 	light.add_to_group("liminal_lights")
@@ -713,7 +705,7 @@ func _add_room_light() -> void:
 	light.omni_range = 9.5
 	light.light_color = [Color(1.0, 0.83, 0.47), Color(0.55, 0.88, 0.96), Color(0.72, 0.52, 0.4), Color(0.42, 0.56, 0.47), Color(0.86, 0.78, 0.62), Color(0.58, 0.66, 0.73)][biome]
 	# Deeper rooms are dimmer — dread through darkness
-	light.base_energy = base_energies[biome] * (1.0 - depth_factor * 0.35)
+	light.base_energy = base_energies[biome] * (1.0 - depth_factor * 0.22)
 	light.shadow_enabled = true
 	add_child(light)
 
@@ -851,6 +843,27 @@ func _make_crash_fallback() -> AudioStreamWAV:
 	wav.mix_rate = rate
 	wav.data = data
 	return wav
+
+static var _shared_water_mat: ShaderMaterial
+
+func _water_material() -> ShaderMaterial:
+	if _shared_water_mat == null:
+		_shared_water_mat = ShaderMaterial.new()
+		_shared_water_mat.shader = load("res://shaders/water.gdshader")
+	return _shared_water_mat
+
+## Single optimized water plane (one shared material, shadows off) — replaces stacked transparent boxes.
+func _add_water(node_name: String, size_x: float, size_z: float, y: float) -> MeshInstance3D:
+	var node := MeshInstance3D.new()
+	node.name = node_name
+	var plane := PlaneMesh.new()
+	plane.size = Vector2(size_x, size_z)
+	node.mesh = plane
+	node.material_override = _water_material()
+	node.position = Vector3(0, y, 0)
+	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(node)
+	return node
 
 func _add_box(node_name: String, size: Vector3, pos: Vector3, material: Material, collision_enabled: bool) -> MeshInstance3D:
 	var node := MeshInstance3D.new()

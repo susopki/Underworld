@@ -49,7 +49,7 @@ func _process(delta: float) -> void:
 	if _environment:
 		var low_pulse := sin(_breath * 0.23 + float(_zone) * 0.9) * 0.5 + 0.5
 		_environment.fog_density = lerpf(_environment.fog_density, _base_fog_density(_zone) + low_pulse * 0.006 + anomaly * 0.018, delta * 0.22)
-		_environment.ambient_light_energy = lerpf(_environment.ambient_light_energy, 0.22 + low_pulse * 0.08, delta * 0.18)
+		_environment.ambient_light_energy = lerpf(_environment.ambient_light_energy, 0.34 + low_pulse * 0.08, delta * 0.18)
 	var rect := get_node_or_null(vhs_rect_path) as ColorRect
 	if rect and rect.material:
 		var shader_material := rect.material as ShaderMaterial
@@ -99,4 +99,4 @@ func fog_surge(strength := 1.0, duration := 5.0) -> void:
 	pulse_anomaly(0.35 * strength)
 
 func _base_fog_density(zone_id: int) -> float:
-	return [0.036, 0.052, 0.043, 0.063, 0.032, 0.074][posmod(zone_id, 6)]
+	return [0.036, 0.045, 0.043, 0.05, 0.032, 0.055][posmod(zone_id, 6)]
