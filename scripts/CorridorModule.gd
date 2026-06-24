@@ -115,9 +115,11 @@ func _add_light(pos: Vector3, unstable: bool) -> void:
 	var light := FlickeringLight.new()
 	light.name = "FlickeringLight"
 	light.position = pos
-	light.omni_range = 8.5
+	light.omni_range = 10.5
+	light.omni_attenuation = 1.4
+	light.light_size = 0.35
 	light.light_color = [Color(1.0, 0.83, 0.47), Color(0.62, 0.9, 0.95), Color(0.78, 0.63, 0.51), Color(0.56, 0.63, 0.57), Color(0.86, 0.78, 0.62), Color(0.58, 0.66, 0.73)][mini(zone_type, 5)]
 	light.shadow_enabled = true
-	light.base_energy = 2.2
+	light.base_energy = 2.8
 	light.random_flicker = unstable
 	add_child(light)

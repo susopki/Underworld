@@ -251,7 +251,7 @@ func _add_surface_age(palette: Array[Material]) -> void:
 func _add_ceiling_fixture() -> void:
 	var cell_seed: int = absi(grid_coord.x * 53 + grid_coord.y * 71 + biome * 113)
 	var lamp_colors: Array[Color] = [Color(1.0, 0.82, 0.42), Color(0.53, 0.92, 1.0), Color(0.78, 0.55, 0.38), Color(0.42, 0.68, 0.53), Color(1.0, 0.82, 0.56), Color(0.56, 0.66, 0.78)]
-	var lamp_energies: Array[float] = [1.7, 1.3, 0.8, 0.7, 1.0, 0.6]
+	var lamp_energies: Array[float] = [2.8, 2.2, 1.5, 1.3, 1.8, 1.2]
 	var lamp_color: Color = lamp_colors[biome]
 	# Deep rooms may have dead fixtures
 	var fixture_dead := depth_factor > 0.55 and posmod(cell_seed, 3) == 0
@@ -811,16 +811,19 @@ func _add_atmosphere_effects() -> void:
 func _add_room_light() -> void:
 	if biome == 0 and ceiling_rift:
 		_add_ceiling_rift()
-	var base_energies: Array[float] = [2.2, 2.7, 1.8, 1.75, 1.85, 1.8]
+	var base_energies: Array[float] = [2.7, 3.1, 2.4, 2.3, 2.5, 2.35]
 	var light := FlickeringLight.new()
 	light.name = "BiomeLight"
 	light.add_to_group("liminal_lights")
-	light.position = Vector3(0, room_height - 0.45, 0)
-	light.omni_range = 9.5
+	# Sit the light at the actual ceiling fixture so its halo in fog matches the lamp.
+	light.position = Vector3(0, room_height - 0.28, 0)
+	light.omni_range = 11.5
+	light.omni_attenuation = 1.4
+	light.light_size = 0.35  # soft shadows (Forward+)
 	var light_colors := [Color(1.0, 0.83, 0.47), Color(0.55, 0.88, 0.96), Color(0.72, 0.52, 0.4), Color(0.42, 0.56, 0.47), Color(0.86, 0.78, 0.62), Color(0.58, 0.66, 0.73)]
 	light.light_color = light_colors[biome]
-	# Deeper rooms are dimmer — dread through darkness
-	light.base_energy = base_energies[biome] * (1.0 - depth_factor * 0.22)
+	# Deeper rooms only mildly dimmer now — dread through fog, not pitch black.
+	light.base_energy = base_energies[biome] * (1.0 - depth_factor * 0.14)
 	light.shadow_enabled = true
 	add_child(light)
 	# Dim unshadowed fill light to soften harsh shadows — placed low and off-centre
@@ -830,7 +833,7 @@ func _add_room_light() -> void:
 	fill.position = Vector3(float(posmod(cell_seed, 5) - 2) * 1.6, 1.05, float(posmod(cell_seed >> 2, 5) - 2) * 1.6)
 	fill.omni_range = 7.0
 	fill.light_color = light_colors[biome].lightened(0.12)
-	fill.light_energy = base_energies[biome] * 0.24 * (1.0 - depth_factor * 0.2)
+	fill.light_energy = base_energies[biome] * 0.32 * (1.0 - depth_factor * 0.12)
 	fill.shadow_enabled = false
 	add_child(fill)
 
@@ -1070,9 +1073,9 @@ func _build_floodlights_cell(palette: Array[Material]) -> void:
 	# Room light: dim bluish-green point (moonlight feel, far above)
 	var sky_light := OmniLight3D.new()
 	sky_light.name = "SkyAmbient"
-	sky_light.light_color = Color(0.38, 0.7, 0.44)
-	sky_light.light_energy = 0.45
-	sky_light.omni_range = 18.0
+	sky_light.light_color = Color(0.4, 0.72, 0.46)
+	sky_light.light_energy = 0.75
+	sky_light.omni_range = 22.0
 	sky_light.shadow_enabled = false
 	sky_light.add_to_group("liminal_lights")
 	sky_light.position = Vector3(0, 12.0, 0)
