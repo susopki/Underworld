@@ -139,11 +139,41 @@ func _wall(side: int, has_opening: bool, material: Material) -> void:
 		lintel_pos.y = room_height - 0.28
 		var lintel_size := Vector3(2.6, 0.56, 0.2) if horizontal else Vector3(0.2, 0.56, 2.6)
 		_add_box("Lintel", lintel_size, lintel_pos, material, true)
+		# Door jambs — vertical side posts framing the opening
+		var jamb_h := room_height - 0.56
+		for door_edge in [-1.3, 1.3]:
+			if horizontal:
+				_add_box("DoorJamb", Vector3(0.14, jamb_h, 0.22), Vector3(door_edge, jamb_h * 0.5, base.z), material, true)
+			else:
+				_add_box("DoorJamb", Vector3(0.22, jamb_h, 0.14), Vector3(base.x, jamb_h * 0.5, door_edge), material, true)
+		# Baseboards on the wall segments flanking the opening
+		if biome in [0, 2, 4, 5]:
+			var bmat := _baseboard_material()
+			for seg_offset in [-3.15, 3.15]:
+				if horizontal:
+					_add_box("Baseboard", Vector3(3.7, 0.13, 0.025), Vector3(seg_offset, 0.065, sign_value * (room_size * 0.5 - 0.016)), bmat, false)
+				else:
+					_add_box("Baseboard", Vector3(0.025, 0.13, 3.7), Vector3(sign_value * (room_size * 0.5 - 0.016), 0.065, seg_offset), bmat, false)
 	else:
 		var full_size := Vector3(room_size, room_height, 0.18) if horizontal else Vector3(0.18, room_height, room_size)
 		_add_box("ClosedWall", full_size, base, material, true)
 		if biome == 1:
 			_add_cloud_window(side, base)
+		# Baseboard along the full closed wall
+		if biome in [0, 2, 4, 5]:
+			var bmat := _baseboard_material()
+			if horizontal:
+				_add_box("Baseboard", Vector3(room_size, 0.13, 0.025), Vector3(0, 0.065, sign_value * (room_size * 0.5 - 0.016)), bmat, false)
+			else:
+				_add_box("Baseboard", Vector3(0.025, 0.13, room_size), Vector3(sign_value * (room_size * 0.5 - 0.016), 0.065, 0), bmat, false)
+
+func _baseboard_material() -> StandardMaterial3D:
+	match biome:
+		0: return _material(Color(0.68, 0.65, 0.58), 0.88)     # Cream painted wood trim
+		2: return _material(Color(0.072, 0.038, 0.028), 0.97)  # Dark wood skirting
+		4: return _material(Color(0.20, 0.185, 0.16), 0.68)    # Polished dark mall trim
+		5: return _material(Color(0.115, 0.125, 0.135), 0.92)  # Concrete ledge
+		_: return _material(Color(0.06, 0.06, 0.06), 0.9)
 
 func _add_cloud_window(side: int, base: Vector3) -> void:
 	var horizontal := side == 0 or side == 2
@@ -729,11 +759,22 @@ func _add_room_light() -> void:
 	light.add_to_group("liminal_lights")
 	light.position = Vector3(0, room_height - 0.45, 0)
 	light.omni_range = 9.5
-	light.light_color = [Color(1.0, 0.83, 0.47), Color(0.55, 0.88, 0.96), Color(0.72, 0.52, 0.4), Color(0.42, 0.56, 0.47), Color(0.86, 0.78, 0.62), Color(0.58, 0.66, 0.73)][biome]
+	var light_colors := [Color(1.0, 0.83, 0.47), Color(0.55, 0.88, 0.96), Color(0.72, 0.52, 0.4), Color(0.42, 0.56, 0.47), Color(0.86, 0.78, 0.62), Color(0.58, 0.66, 0.73)]
+	light.light_color = light_colors[biome]
 	# Deeper rooms are dimmer — dread through darkness
 	light.base_energy = base_energies[biome] * (1.0 - depth_factor * 0.22)
 	light.shadow_enabled = true
 	add_child(light)
+	# Dim unshadowed fill light to soften harsh shadows — placed low and off-centre
+	var cell_seed := absi(grid_coord.x * 41 + grid_coord.y * 67 + biome * 89)
+	var fill := OmniLight3D.new()
+	fill.name = "FillLight"
+	fill.position = Vector3(float(posmod(cell_seed, 5) - 2) * 1.6, 1.05, float(posmod(cell_seed >> 2, 5) - 2) * 1.6)
+	fill.omni_range = 7.0
+	fill.light_color = light_colors[biome].lightened(0.12)
+	fill.light_energy = base_energies[biome] * 0.24 * (1.0 - depth_factor * 0.2)
+	fill.shadow_enabled = false
+	add_child(fill)
 
 func _palette() -> Array[Material]:
 	match biome:
