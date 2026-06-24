@@ -2,10 +2,10 @@ extends CanvasLayer
 ## In-game developer console. Toggle with the ` (backtick / grave) key.
 ## Commands:
 ##   noclip          — toggle player collision + free flight
-##   tp <level>      — switch to biome 0..5 (or by name) and respawn player
+##   tp <level>      — switch to biome 0..6 (or by name) and respawn player
 ##   help            — list commands
 
-const BIOME_NAMES := ["offices", "drownedhalls", "apartments", "tunnels", "deadmall", "stairwell"]
+const BIOME_NAMES := ["offices", "drownedhalls", "apartments", "tunnels", "deadmall", "stairwell", "floodlights"]
 
 var _output: RichTextLabel
 var _entry: LineEdit
@@ -37,7 +37,7 @@ func _build_ui() -> void:
 	box.add_child(_entry)
 
 func _input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_QUOTELEFT:
+	if event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_QUOTELEFT:
 		_toggle()
 		get_viewport().set_input_as_handled()
 
@@ -62,7 +62,7 @@ func _on_submit(text: String) -> void:
 	match cmd:
 		"noclip": _cmd_noclip()
 		"tp": _cmd_tp(arg)
-		"help": _print("noclip — toggle clipping\ntp <0-5|name> — jump to biome (%s)" % ", ".join(BIOME_NAMES))
+		"help": _print("noclip — toggle clipping\ntp <0-6|name> — jump to biome (%s)" % ", ".join(BIOME_NAMES))
 		_: _print("[color=#f66]unknown command: %s[/color]" % cmd)
 
 func _cmd_noclip() -> void:
@@ -75,15 +75,15 @@ func _cmd_noclip() -> void:
 
 func _cmd_tp(arg: String) -> void:
 	if arg.is_empty():
-		_print("[color=#f66]usage: tp <0-5 | name>[/color]")
+		_print("[color=#f66]usage: tp <0-6 | name>[/color]")
 		return
 	var level := -1
 	if arg.is_valid_int():
 		level = int(arg)
 	else:
 		level = BIOME_NAMES.find(arg.to_lower())
-	if level < 0 or level > 5:
-		_print("[color=#f66]bad level '%s' (0-5 or: %s)[/color]" % [arg, ", ".join(BIOME_NAMES)])
+	if level < 0 or level > 6:
+		_print("[color=#f66]bad level '%s' (0-6 or: %s)[/color]" % [arg, ", ".join(BIOME_NAMES)])
 		return
 	var gen := _find("LevelGenerator")
 	if gen == null:

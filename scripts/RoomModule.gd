@@ -175,6 +175,8 @@ func _add_surface_age(palette: Array[Material]) -> void:
 	var grime_count := 4 + int(depth_factor * 4)
 	for i in range(grime_count):
 		var side := posmod(cell_seed + i, 4)
+		if bool(openings & (1 << side)):
+			continue  # Wall has a doorway — stains would float in the opening
 		var horizontal := side == 0 or side == 2
 		var sign_value := -1.0 if side == 0 or side == 3 else 1.0
 		var base := Vector3.ZERO
