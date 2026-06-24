@@ -2,8 +2,8 @@ class_name LevelGenerator
 extends Node3D
 
 const ROOM := preload("res://scenes/RoomModule.tscn")
-const BIOME_COUNT := 6
-const BIOME_ROOM_COUNTS := [42, 35, 46, 28, 52, 20]
+const BIOME_COUNT := 7
+const BIOME_ROOM_COUNTS := [42, 35, 46, 28, 52, 20, 60]
 @export var player_path: NodePath
 @export var cell_size := 10.0
 
@@ -23,7 +23,7 @@ func _generate_level(level_id: int) -> void:
 	current_level = posmod(level_id, BIOME_COUNT)
 	room_count = BIOME_ROOM_COUNTS[current_level]
 	generated_root = Node3D.new()
-	generated_root.name = ["YellowOffices", "DrownedHalls", "SilentApartments", "UnderpassTunnels", "DeadMall", "EndlessStairwell"][current_level]
+	generated_root.name = ["YellowOffices", "DrownedHalls", "SilentApartments", "UnderpassTunnels", "DeadMall", "EndlessStairwell", "Floodlights"][current_level]
 	add_child(generated_root)
 	_build_layout()
 	var rift_cell := cells[_rng.randi_range(8, cells.size() - 1)] if current_level == 0 else Vector2i(999, 999)
@@ -66,6 +66,7 @@ func _build_layout() -> void:
 		3: _layout_tunnel_snake()
 		4: _layout_mall_atrium()
 		5: _layout_stairwell_spiral()
+		6: _layout_floodlights_pitch()
 
 func _add_cell(cell: Vector2i) -> void:
 	if not occupied.has(cell):
@@ -166,7 +167,7 @@ func _openings_for(cell: Vector2i) -> int:
 
 func _create_portal(where: Vector3, target: int) -> void:
 	var portal := LevelPortal.new()
-	portal.name = "DoorTo_%s" % ["Offices", "DrownedHalls", "Apartments", "Tunnels", "DeadMall", "Stairwell"][target]
+	portal.name = "DoorTo_%s" % ["Offices", "DrownedHalls", "Apartments", "Tunnels", "DeadMall", "Stairwell", "Floodlights"][target]
 	portal.target_level = target
 	portal.position = where
 	portal.portal_entered.connect(_request_level_switch)
@@ -185,7 +186,7 @@ func _create_portal(where: Vector3, target: int) -> void:
 	_add_portal_box(portal, Vector3(2.0, 2.8, 0.12), Vector3(0, 1.4, 0), black)
 
 	# Bright emissive frame — visible from far away
-	var frame_color: Color = [Color(0.88, 0.76, 0.22), Color(0.18, 0.82, 0.88), Color(0.72, 0.18, 0.10), Color(0.18, 0.55, 0.32), Color(0.82, 0.68, 0.42), Color(0.42, 0.55, 0.72)][target]
+	var frame_color: Color = [Color(0.88, 0.76, 0.22), Color(0.18, 0.82, 0.88), Color(0.72, 0.18, 0.10), Color(0.18, 0.55, 0.32), Color(0.82, 0.68, 0.42), Color(0.42, 0.55, 0.72), Color(0.42, 0.88, 0.52)][target]
 	var frame := StandardMaterial3D.new()
 	frame.albedo_color = frame_color
 	frame.emission_enabled = true
@@ -360,3 +361,17 @@ func spawn_phantom_door(player: Node3D) -> void:
 	var spawn := get_entity_spawn_position(player)
 	door.global_position = spawn
 	door.look_at(Vector3(player.global_position.x, door.global_position.y, player.global_position.z), Vector3.UP)
+
+# 60 cells: huge open pitch — 10×6 grid with extra sideline cells.
+# cell_size=10 so the pitch is 100×60 m — vast and disorienting.
+func _layout_floodlights_pitch() -> void:
+	for x in range(-5, 5):
+		for y in range(-3, 3):
+			_add_cell(Vector2i(x, y))
+	# Extend along sidelines to suggest infinite length
+	for x in range(-8, 8):
+		_add_cell(Vector2i(x, -4))
+		_add_cell(Vector2i(x,  4))
+	# Tree line — one-cell-wide strip on the left (x=-9) suggesting darkness beyond
+	for y in range(-4, 5):
+		_add_cell(Vector2i(-9, y))

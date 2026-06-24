@@ -62,14 +62,15 @@ func pulse_anomaly(strength := 0.8) -> void:
 func set_zone(zone_id: int) -> void:
 	if not _environment:
 		return
-	_zone = posmod(zone_id, 6)
+	_zone = posmod(zone_id, 7)
 	var fog_colors := [
 		Color(0.31, 0.28, 0.18),
 		Color(0.18, 0.34, 0.36),
 		Color(0.22, 0.15, 0.13),
 		Color(0.10, 0.12, 0.105),
 		Color(0.24, 0.215, 0.18),
-		Color(0.11, 0.13, 0.15)
+		Color(0.11, 0.13, 0.15),
+		Color(0.12, 0.22, 0.14),  # Floodlights: dense greenish fog
 	]
 	var ambient_colors := [
 		Color(0.38, 0.34, 0.22),
@@ -77,15 +78,16 @@ func set_zone(zone_id: int) -> void:
 		Color(0.31, 0.22, 0.18),
 		Color(0.18, 0.21, 0.18),
 		Color(0.3, 0.27, 0.22),
-		Color(0.16, 0.19, 0.22)
+		Color(0.16, 0.19, 0.22),
+		Color(0.14, 0.26, 0.16),  # Floodlights: cold green ambience
 	]
 	var index := _zone
 	var tween := create_tween().set_parallel(true)
 	tween.tween_property(_environment, "fog_light_color", fog_colors[index], 2.2)
 	tween.tween_property(_environment, "ambient_light_color", ambient_colors[index], 2.2)
 	tween.tween_property(_environment, "fog_density", _base_fog_density(index), 2.2)
-	tween.tween_property(_environment, "adjustment_saturation", [0.68, 0.54, 0.48, 0.42, 0.58, 0.38][index], 2.2)
-	tween.tween_property(_environment, "adjustment_contrast", [1.22, 1.34, 1.28, 1.42, 1.18, 1.5][index], 2.2)
+	tween.tween_property(_environment, "adjustment_saturation", [0.68, 0.54, 0.48, 0.42, 0.58, 0.38, 0.52][index], 2.2)
+	tween.tween_property(_environment, "adjustment_contrast", [1.22, 1.34, 1.28, 1.42, 1.18, 1.5, 1.38][index], 2.2)
 	pulse_anomaly(0.72)
 
 func fog_surge(strength := 1.0, duration := 5.0) -> void:
@@ -99,4 +101,4 @@ func fog_surge(strength := 1.0, duration := 5.0) -> void:
 	pulse_anomaly(0.35 * strength)
 
 func _base_fog_density(zone_id: int) -> float:
-	return [0.036, 0.045, 0.043, 0.05, 0.032, 0.055][posmod(zone_id, 6)]
+	return [0.036, 0.045, 0.043, 0.05, 0.032, 0.055, 0.072][posmod(zone_id, 7)]

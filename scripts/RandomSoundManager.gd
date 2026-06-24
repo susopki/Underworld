@@ -20,11 +20,11 @@ func _process(delta: float) -> void:
 		_timer = _rng.randf_range(15.0, 34.0)
 
 func set_biome(biome: int) -> void:
-	current_biome = posmod(biome, 6)
+	current_biome = posmod(biome, 7)
 	if not _ambience_player:
 		return
 	_ambience_player.stream = _make_biome_ambience(current_biome)
-	_ambience_player.volume_db = [-28.0, -25.0, -31.0, -22.0, -29.0, -24.0][current_biome]
+	_ambience_player.volume_db = [-28.0, -25.0, -31.0, -22.0, -29.0, -24.0, -20.0][current_biome]
 	_ambience_player.play()
 
 func _start_ambience() -> void:
@@ -74,6 +74,11 @@ func _play_biome_event() -> void:
 			if _rng.randf() < 0.45: play_ceiling_scrape()
 			elif _rng.randf() < 0.72: play_reverse_hit()
 			else: play_distant_steps()
+		6: # Floodlights: hum, distant steps, metal clang of goalposts.
+			if _rng.randf() < 0.38: play_distant_steps()
+			elif _rng.randf() < 0.62: _play_3d(_make_floodlight_hum(), _random_distant_position(), -8.0)
+			elif _rng.randf() < 0.80: _play_3d(_make_goalpost_clang(), _random_distant_position(), -12.0)
+			else: play_wall_breath(false)
 
 func play_distant_steps() -> void:
 	var side := -1.0 if _rng.randf() < 0.5 else 1.0
@@ -158,6 +163,12 @@ func _make_biome_ambience(biome: int) -> AudioStreamWAV:
 				value = sin(TAU * 46.0 * t) * 0.13 + sin(TAU * 311.0 * t + sin(t * 0.3)) * 0.035 + filtered * 0.26
 			5:
 				value = filtered * (0.38 + 0.2 * sin(TAU * 0.21 * t)) + sin(TAU * 83.0 * t) * sin(TAU * 0.12 * t) * 0.1
+			6:
+				# Floodlights: deep electrical hum (120 Hz) + wind noise + distant drone
+				var wind := filtered * (0.22 + 0.14 * sin(TAU * 0.08 * t))
+				var hum := sin(TAU * 120.0 * t) * 0.28 + sin(TAU * 240.0 * t) * 0.08
+				var rumble := sin(TAU * 18.0 * t) * 0.12 * (0.5 + 0.5 * sin(TAU * 0.04 * t))
+				value = wind + hum + rumble
 		data.encode_s16(i * 2, int(clampf(value, -1.0, 1.0) * 12000.0))
 	return _wav(data, rate, true)
 
@@ -394,6 +405,46 @@ func _make_noise(seconds: float, smooth: float, seed_value: int) -> AudioStreamW
 		filtered = lerpf(filtered, rng.randf_range(-1.0, 1.0), smooth)
 		var envelope := sin(PI * t / seconds)
 		data.encode_s16(i * 2, int(filtered * envelope * 17000.0))
+	return _wav(data, rate, false)
+
+# Floodlights: persistent electrical hum of a stadium light ballast
+func _make_floodlight_hum() -> AudioStreamWAV:
+	var rate := 22050
+	var seconds := 4.5
+	var count := int(rate * seconds)
+	var data := PackedByteArray()
+	data.resize(count * 2)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = _rng.randi()
+	var filtered := 0.0
+	for i in count:
+		var t := float(i) / rate
+		filtered = lerpf(filtered, rng.randf_range(-1.0, 1.0), 0.012)
+		var env := sin(PI * t / seconds)
+		var hum := sin(TAU * 120.0 * t) * 0.55 + sin(TAU * 240.0 * t) * 0.18 + sin(TAU * 360.0 * t) * 0.07
+		var flicker := 1.0 + sin(TAU * 0.7 * t) * 0.08 + filtered * 0.06
+		var value := hum * flicker * env
+		data.encode_s16(i * 2, int(clampf(value, -1.0, 1.0) * 14000.0))
+	return _wav(data, rate, false)
+
+# Floodlights: metallic resonance of football goalpost hit by wind
+func _make_goalpost_clang() -> AudioStreamWAV:
+	var rate := 22050
+	var seconds := 5.5
+	var count := int(rate * seconds)
+	var data := PackedByteArray()
+	data.resize(count * 2)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = _rng.randi()
+	for i in count:
+		var t := float(i) / rate
+		# Fundamental + overtones of a hollow metal pipe
+		var v1 := sin(TAU * 87.0 * t) * exp(-t * 0.55)
+		var v2 := sin(TAU * 174.0 * t) * exp(-t * 0.9) * 0.45
+		var v3 := sin(TAU * 261.0 * t) * exp(-t * 1.6) * 0.2
+		var v4 := sin(TAU * 58.0 * t) * exp(-t * 0.3) * 0.3  # low boom
+		var value := (v1 + v2 + v3 + v4) * 0.7
+		data.encode_s16(i * 2, int(clampf(value, -1.0, 1.0) * 18000.0))
 	return _wav(data, rate, false)
 
 func _play_3d(stream: AudioStream, where: Vector3, volume: float) -> void:

@@ -28,14 +28,24 @@ const EXTERNAL_PROPS := {
 	"cash_register":"res://assets/models/polyhaven/CashRegister_01/CashRegister_01_1k.gltf",
 	"coffee_cart": "res://assets/models/polyhaven/CoffeeCart_01/CoffeeCart_01_1k.gltf",
 	"shop_shutter":"res://assets/models/polyhaven/rollershutter_door/rollershutter_door_1k.gltf",
-	"retail_rack": "res://assets/models/polyhaven/worn_metal_rack/worn_metal_rack_1k.gltf",
+	"retail_rack":    "res://assets/models/polyhaven/worn_metal_rack/worn_metal_rack_1k.gltf",
+	"suitcase":       "res://assets/models/polyhaven/vintage_suitcase/vintage_suitcase_1k.gltf",
+	"fire_hydrant":   "res://assets/models/polyhaven/fire_hydrant/fire_hydrant_1k.gltf",
+	"alarm_clock":    "res://assets/models/polyhaven/alarm_clock_01/alarm_clock_01_1k.gltf",
+	"toolbox":        "res://assets/models/polyhaven/metal_toolbox/metal_toolbox_1k.gltf",
+	"trashbag":       "res://assets/models/polyhaven/trashbag/trashbag_1k.gltf",
+	"ammo_box":       "res://assets/models/polyhaven/ammo_box/ammo_box_1k.gltf",
+	"military_crate": "res://assets/models/polyhaven/old_military_crate/old_military_crate_1k.gltf",
+	"steel_shelf":    "res://assets/models/polyhaven/steel_frame_shelves_01/steel_frame_shelves_01_1k.gltf",
 }
 # mass in kg — heavy props resist being knocked over
 const PROP_MASSES := {
 	"desk": 65.0, "shelf": 40.0, "box": 7.0, "trash": 10.0, "door": 90.0,
 	"chair": 8.0, "barrel": 32.0, "table": 28.0, "wet_sign": 3.0, "armchair": 22.0, "crowbar": 4.0,
 	"laptop": 2.5, "cat_statue": 18.0, "ladder": 12.0, "monobloc": 5.0, "extinguisher": 6.0, "bleach": 1.5, "radio": 8.0, "stool": 7.0, "spray": 1.0,
-	"potted_plant": 14.0, "bench": 24.0, "cash_register": 9.0, "coffee_cart": 60.0, "shop_shutter": 50.0, "retail_rack": 30.0
+	"potted_plant": 14.0, "bench": 24.0, "cash_register": 9.0, "coffee_cart": 60.0, "shop_shutter": 50.0, "retail_rack": 30.0,
+	"suitcase": 8.0, "fire_hydrant": 35.0, "alarm_clock": 2.0, "toolbox": 12.0, "trashbag": 4.0,
+	"ammo_box": 6.0, "military_crate": 22.0, "steel_shelf": 38.0,
 }
 # approximate collision box sizes in metres (unscaled)
 const PROP_COLLISION_SIZES := {
@@ -52,6 +62,10 @@ const PROP_COLLISION_SIZES := {
 	"potted_plant": Vector3(0.59, 1.34, 0.63), "bench": Vector3(1.16, 0.89, 0.50),
 	"cash_register": Vector3(0.60, 0.62, 0.44), "coffee_cart": Vector3(2.17, 1.72, 1.07),
 	"shop_shutter": Vector3(1.08, 2.40, 0.30), "retail_rack": Vector3(0.92, 1.90, 0.60),
+	"suitcase": Vector3(0.72, 0.30, 0.44), "fire_hydrant": Vector3(0.28, 0.55, 0.28),
+	"alarm_clock": Vector3(0.14, 0.16, 0.10), "toolbox": Vector3(0.48, 0.24, 0.22),
+	"trashbag": Vector3(0.44, 0.55, 0.38), "ammo_box": Vector3(0.42, 0.22, 0.26),
+	"military_crate": Vector3(0.72, 0.44, 0.48), "steel_shelf": Vector3(0.56, 1.85, 0.36),
 }
 
 # Large props that should NOT have physics (block doorways when fallen)
@@ -61,6 +75,8 @@ const STATIC_PROPS := [
 	"coffee_cart",
 	"shop_shutter",
 	"retail_rack",
+	"steel_shelf",
+	"fire_hydrant",
 ]
 # Real downloaded crash sounds (first that exists wins; falls back to synthesis)
 const COLLAPSE_SOUNDS := ["res://audio/collapse.ogg", "res://audio/collapse.wav", "res://audio/collapse.mp3"]
@@ -79,8 +95,11 @@ func _ready() -> void:
 	_build_room()
 
 func _build_room() -> void:
-	room_height = [3.25, 4.1, 3.0, 3.65, 5.2, 5.8][biome]
+	room_height = [3.25, 4.1, 3.0, 3.65, 5.2, 5.8, 0.0][biome]
 	var palette := _palette()
+	if biome == 6:
+		_build_floodlights_cell(palette)
+		return
 	_add_box("Floor", Vector3(room_size, 0.18, room_size), Vector3(0, -0.09, 0), palette[1], true)
 	_add_box("Ceiling", Vector3(room_size, 0.16, room_size), Vector3(0, room_height, 0), palette[2], true)
 	_wall(0, bool(openings & 1), palette[0])
@@ -286,6 +305,10 @@ func _add_external_downloaded_props() -> void:
 					_spawn_external_model("extinguisher", Vector3(4.35, 0.03, -3.4), Vector3.ONE * 0.85, Vector3(0, 90, 0))
 				if posmod(cell_seed, 6) == 2:
 					_spawn_external_model("radio", Vector3(-4.3, 0.02, 0.5), Vector3.ONE * 0.9, Vector3(0, 120, 0))
+				if posmod(cell_seed, 7) == 3:
+					_spawn_external_model("alarm_clock", Vector3(-2.65, 0.78, -1.8), Vector3.ONE * 1.0, Vector3(0, 55, 0))
+				if posmod(cell_seed, 5) == 4:
+					_spawn_external_model("toolbox", Vector3(3.8, 0.02, 2.2), Vector3.ONE * 0.95, Vector3(0, -30, 0))
 		1:
 			# Drowned: wet sign + barrel near walls + occasional cat statue
 			_spawn_external_model("wet_sign", Vector3(-4.1, 0.03, 2.8), Vector3.ONE * 1.0, Vector3(0, 12, 0))
@@ -300,6 +323,8 @@ func _add_external_downloaded_props() -> void:
 				_spawn_external_model("bleach", Vector3(-3.8, 0.02, -0.5), Vector3.ONE * 1.0, Vector3(0, 30, 0))
 			if posmod(cell_seed, 5) == 2:
 				_spawn_external_model("stool", Vector3(4.2, 0.02, 2.6), Vector3.ONE * 1.0, Vector3(0, -60, 0))
+			if posmod(cell_seed, 6) == 1:
+				_spawn_external_model("suitcase", Vector3(-2.1, 0.02, 3.7), Vector3.ONE * 0.95, Vector3(0, 20, 0))
 		2:
 			if cluster == 0:
 				# Living room feel: armchair + table
@@ -335,6 +360,10 @@ func _add_external_downloaded_props() -> void:
 				_spawn_external_model("spray", Vector3(-4.2, 0.02, -3.1), Vector3.ONE * 1.0, Vector3(0, 40, -10))
 			if posmod(cell_seed, 4) == 1:
 				_spawn_external_model("stool", Vector3(4.5, 0.02, 3.4), Vector3.ONE * 0.95, Vector3(0, 180, 0))
+			if posmod(cell_seed, 5) == 3:
+				_spawn_external_model("ammo_box", Vector3(-1.8, 0.02, -4.3), Vector3.ONE * 1.0, Vector3(0, 70, 0))
+			if posmod(cell_seed, 6) == 4:
+				_spawn_external_model("military_crate", Vector3(3.5, 0.02, -3.8), Vector3.ONE * 1.0, Vector3(0, -15, 0))
 		4:
 			if cluster == 0:
 				# Storefront: worn retail rack + shop shelf + planter
@@ -370,6 +399,10 @@ func _add_external_downloaded_props() -> void:
 				_spawn_external_model("bleach", Vector3(-3.2, 0.02, 3.8), Vector3.ONE * 0.9, Vector3(0, -25, 15))
 			if posmod(cell_seed, 4) == 1:
 				_spawn_external_model("extinguisher", Vector3(3.5, 0.03, 4.2), Vector3.ONE * 0.85, Vector3(0, -90, 0))
+			if posmod(cell_seed, 5) == 2:
+				_spawn_external_model("suitcase", Vector3(-4.1, 0.02, -1.5), Vector3.ONE * 0.9, Vector3(0, 45, 0))
+			if posmod(cell_seed, 6) == 3:
+				_spawn_external_model("toolbox", Vector3(2.8, 0.02, 4.5), Vector3.ONE * 0.9, Vector3(0, 10, 0))
 
 func _spawn_external_model(prop_id: String, pos: Vector3, scale_value: Vector3, rotation_deg: Vector3) -> Node3D:
 	var path: String = EXTERNAL_PROPS.get(prop_id, "")
@@ -676,10 +709,12 @@ func _add_atmosphere_effects() -> void:
 	var mist_node := MeshInstance3D.new()
 	mist_node.name = "FloorMist"
 	var mist_mesh := BoxMesh.new()
-	mist_mesh.size = Vector3(9.6, 0.38, 9.6)
+	# Kept well inside room centre — doorways are 2.6 m wide, walls at ±5 m.
+	# A 5.5 m panel clears all openings and avoids the translucent-wall glitch.
+	mist_mesh.size = Vector3(5.5, 0.12, 5.5)
 	mist_mesh.material = mist_mat
 	mist_node.mesh = mist_mesh
-	mist_node.position = Vector3(0, 0.19, 0)
+	mist_node.position = Vector3(0, 0.06, 0)
 	mist_node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(mist_node)
 
@@ -705,6 +740,8 @@ func _palette() -> Array[Material]:
 		3: return [_material(Color(0.15, 0.17, 0.16)), _material(Color(0.055, 0.06, 0.055)), _material(Color(0.11, 0.12, 0.11))]
 		4: return [_material(Color(0.31, 0.285, 0.25)), _material(Color(0.18, 0.175, 0.16), 0.38), _material(Color(0.42, 0.4, 0.35))]
 		5: return [_material(Color(0.19, 0.205, 0.21)), _material(Color(0.075, 0.08, 0.085)), _material(Color(0.13, 0.14, 0.15))]
+		6: # Floodlights: muddy grass, worn white paint
+			return [_material(Color(0.08, 0.14, 0.06), 1.0), _material(Color(0.055, 0.095, 0.04), 1.0), _material(Color(0.18, 0.22, 0.15))]
 		_: return [preload("res://materials/wall.tres"), preload("res://materials/floor.tres"), preload("res://materials/ceiling.tres")]
 
 func _material(color: Color, roughness := 0.9) -> StandardMaterial3D:
@@ -873,3 +910,170 @@ func _add_box(node_name: String, size: Vector3, pos: Vector3, material: Material
 		body.add_child(collision)
 		add_child(body)
 	return node
+
+## Floodlights biome: each "room" is a 10×10 m open pitch cell — no walls, no ceiling.
+## The grid produces an endless-feeling football field.
+func _build_floodlights_cell(palette: Array[Material]) -> void:
+	var cell_seed: int = absi(grid_coord.x * 40507 + grid_coord.y * 28019 + 6 * 91273)
+
+	# Grass floor — muddy, worn, slightly dark green
+	_add_box("PitchFloor", Vector3(room_size, 0.12, room_size), Vector3(0, -0.06, 0), palette[1], true)
+
+	# White line markings (UV-faded, worn paint)
+	var line_mat := _emissive_material(Color(0.72, 0.76, 0.65), 0.06)
+	# Centre line
+	_add_box("CentreLine", Vector3(room_size, 0.015, 0.18), Vector3(0, 0.008, 0), line_mat, false)
+	_add_box("SideLine", Vector3(0.18, 0.015, room_size), Vector3(0, 0.008, 0), line_mat, false)
+
+	# Muddy puddle patches — deterministic per cell
+	var mud := _material(Color(0.038, 0.028, 0.016), 1.0)
+	if posmod(cell_seed, 3) != 2:
+		var px := -3.5 + float(posmod(cell_seed, 7))
+		var pz := -3.0 + float(posmod(cell_seed >> 2, 6))
+		_add_box("MudPatch", Vector3(2.2 + float(posmod(cell_seed, 4)) * 0.4, 0.012, 1.4 + float(posmod(cell_seed >> 4, 3)) * 0.3), Vector3(px, 0.007, pz), mud, false)
+
+	# Goalpost — only on cells along the far ends of the pitch (y coord ±4)
+	if abs(grid_coord.y) == 4 and posmod(grid_coord.x + 5, 3) == 0:
+		_build_goalpost()
+
+	# Floodlight mast — tall steel pole + broad beam head — placed at corners
+	if posmod(cell_seed, 4) == 0:
+		_build_floodlight_mast(Vector3(4.6, 0.0, 4.6), cell_seed)
+	elif posmod(cell_seed, 4) == 1:
+		_build_floodlight_mast(Vector3(-4.6, 0.0, 4.6), cell_seed)
+
+	# Sparse props on sideline cells
+	if grid_coord.x == -9:
+		_build_treeline_cell(cell_seed, palette)
+	else:
+		if posmod(cell_seed, 7) == 0:
+			_spawn_external_model("trashbag", Vector3(-4.0, 0.02, 3.5), Vector3.ONE * 1.0, Vector3(0, float(posmod(cell_seed, 36)) * 10.0, 0))
+		if posmod(cell_seed, 9) == 3:
+			_spawn_external_model("ammo_box", Vector3(3.8, 0.02, -3.2), Vector3.ONE * 1.0, Vector3(0, 45.0, 0))
+
+	# Portal room: add fog surge zone marker
+	if is_portal_room:
+		var glow := _emissive_material(Color(0.42, 0.88, 0.52), 0.25)
+		glow.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		glow.albedo_color = Color(0.42, 0.88, 0.52, 0.18)
+		_add_box("ExitGlow", Vector3(3.0, 0.02, 3.0), Vector3(0, 0.01, 0), glow, false)
+
+	# Collapse setup still applies
+	_maybe_setup_collapse()
+
+	# Atmosphere: thick ground mist + particles
+	_add_floodlights_atmosphere()
+
+	# Room light: dim bluish-green point (moonlight feel, far above)
+	var sky_light := OmniLight3D.new()
+	sky_light.name = "SkyAmbient"
+	sky_light.light_color = Color(0.38, 0.7, 0.44)
+	sky_light.light_energy = 0.45
+	sky_light.omni_range = 18.0
+	sky_light.shadow_enabled = false
+	sky_light.add_to_group("liminal_lights")
+	sky_light.position = Vector3(0, 12.0, 0)
+	add_child(sky_light)
+
+func _build_goalpost() -> void:
+	var metal := _material(Color(0.72, 0.72, 0.7), 0.25)
+	# Two uprights
+	_add_box("PostLeft",  Vector3(0.12, 2.55, 0.12), Vector3(-3.66, 1.275, 0), metal, true)
+	_add_box("PostRight", Vector3(0.12, 2.55, 0.12), Vector3( 3.66, 1.275, 0), metal, true)
+	# Crossbar
+	_add_box("Crossbar",  Vector3(7.32, 0.12, 0.12), Vector3(0, 2.55, 0), metal, false)
+	# Net suggestion (transparent dark mesh)
+	var net_mat := _material(Color(0.06, 0.07, 0.06), 0.9)
+	net_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	net_mat.albedo_color.a = 0.55
+	_add_box("NetBack",   Vector3(7.32, 2.55, 0.06), Vector3(0, 1.275, -1.8), net_mat, false)
+	_add_box("NetTop",    Vector3(7.32, 0.06, 1.8),  Vector3(0, 2.55, -0.9),  net_mat, false)
+
+func _build_floodlight_mast(offset: Vector3, cell_seed: int) -> void:
+	var steel := _material(Color(0.18, 0.19, 0.17), 0.35)
+	# Pole
+	_add_box("MastPole", Vector3(0.22, 14.0, 0.22), offset + Vector3(0, 7.0, 0), steel, true)
+	# Crossarm
+	_add_box("MastArm", Vector3(2.4, 0.18, 0.18), offset + Vector3(0, 13.8, 0), steel, false)
+
+	# Floodlight heads — SpotLight3D, cold green-white, strong cone downward
+	var light_color := Color(0.72, 0.92, 0.76)
+	for dx in [-0.9, 0.0, 0.9]:
+		var spot := SpotLight3D.new()
+		spot.name = "FloodSpot"
+		spot.light_color = light_color
+		spot.light_energy = 3.8 + float(posmod(cell_seed, 4)) * 0.35
+		spot.spot_range = 28.0
+		spot.spot_angle = 38.0
+		spot.spot_attenuation = 0.5
+		spot.shadow_enabled = true
+		spot.position = offset + Vector3(dx, 14.2, 0)
+		spot.rotation_degrees = Vector3(-78.0, float(posmod(cell_seed + int(dx * 10), 24)) * 5.0, 0)
+		spot.add_to_group("liminal_lights")
+		add_child(spot)
+
+		# Emissive head box
+		var head_mat := _emissive_material(light_color, 4.5)
+		_add_box("LampHead", Vector3(0.55, 0.16, 0.38), offset + Vector3(dx, 13.85, 0), head_mat, false)
+
+func _build_treeline_cell(cell_seed: int, _palette_unused: Array[Material]) -> void:
+	# Dark tree silhouettes — capsule + sphere, nearly black
+	var bark := _material(Color(0.02, 0.024, 0.018), 0.95)
+	var leaf := _material(Color(0.015, 0.022, 0.012), 1.0)
+	var tree_count := 2 + posmod(cell_seed, 3)
+	for i in tree_count:
+		var tx := -3.5 + float(i) * (7.0 / maxf(float(tree_count - 1), 1.0))
+		var theight := 5.5 + float(posmod(cell_seed + i * 13, 5)) * 0.7
+		_add_box("TreeTrunk_%d" % i, Vector3(0.28, theight, 0.28), Vector3(tx, theight * 0.5, 0), bark, true)
+		# Crown
+		var crown := MeshInstance3D.new()
+		crown.name = "TreeCrown_%d" % i
+		var mesh := SphereMesh.new()
+		mesh.radius = 1.4 + float(posmod(cell_seed + i * 7, 4)) * 0.25
+		mesh.height = mesh.radius * 2.0
+		mesh.radial_segments = 6
+		mesh.rings = 3
+		mesh.material = leaf
+		crown.mesh = mesh
+		crown.position = Vector3(tx, theight + mesh.radius * 0.7, 0)
+		add_child(crown)
+	# Darkness behind — black wall
+	var void_mat := _material(Color(0.002, 0.003, 0.002), 1.0)
+	_add_box("ForestVoid", Vector3(0.16, 8.0, room_size), Vector3(-4.85, 4.0, 0), void_mat, true)
+
+func _add_floodlights_atmosphere() -> void:
+	# Thick low-lying ground fog — denser than other biomes
+	var mist_mat := StandardMaterial3D.new()
+	mist_mat.albedo_color = Color(0.15, 0.26, 0.16, 0.22 + depth_factor * 0.08)
+	mist_mat.roughness = 1.0
+	mist_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mist_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mist_mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var mist := MeshInstance3D.new()
+	mist.name = "PitchMist"
+	var mist_mesh := BoxMesh.new()
+	mist_mesh.size = Vector3(5.5, 0.28, 5.5)
+	mist_mesh.material = mist_mat
+	mist.mesh = mist_mesh
+	mist.position = Vector3(0, 0.14, 0)
+	mist.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(mist)
+
+	# Floating moisture particles — light drizzle feel
+	var p := CPUParticles3D.new()
+	p.name = "Drizzle"
+	p.amount = 22
+	p.lifetime = 5.0
+	p.explosiveness = 0.0
+	p.emission_shape = CPUParticles3D.EMISSION_SHAPE_BOX
+	p.emission_box_extents = Vector3(4.5, 2.0, 4.5)
+	p.position = Vector3(0, 3.0, 0)
+	p.direction = Vector3(0.06, -1.0, 0.04)
+	p.spread = 8.0
+	p.gravity = Vector3(0, -0.4, 0)
+	p.initial_velocity_min = 0.3
+	p.initial_velocity_max = 0.8
+	p.scale_amount_min = 0.006
+	p.scale_amount_max = 0.018
+	p.color = Color(0.55, 0.72, 0.58, 0.45)
+	add_child(p)
