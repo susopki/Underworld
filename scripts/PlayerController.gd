@@ -155,33 +155,57 @@ func _build_step_audio() -> void:
 	_step_player = AudioStreamPlayer.new()
 	_step_player.name = "Footsteps"
 	add_child(_step_player)
-	# Parametric footstep per biome: [sharpness 0..1, body_hz, decay_rate]
+	# Per biome: [body_hz, noise_mix 0..1, ring_decay, duration_s]
+	# body_hz     — fundamental resonance of the floor material
+	# noise_mix   — 1.0 = all filtered noise (carpet/grass), 0.0 = pure resonance (marble)
+	# ring_decay  — how fast the resonance fades (high = dull, low = ringy)
+	# duration    — total clip length
 	var params := [
-		[0.04, 72.0,  22.0],  # 0 offices   — muffled carpet thud
-		[0.52, 260.0, 13.0],  # 1 drowned   — wet tile slap
-		[0.26, 108.0, 17.0],  # 2 apartments — hollow floor knock
-		[0.68, 90.0,  10.0],  # 3 tunnels   — concrete slap + ring
-		[0.88, 340.0,  7.0],  # 4 dead mall  — marble click
-		[0.74, 86.0,   6.0],  # 5 stairwell  — hard echo
-		[0.03, 62.0,  26.0],  # 6 floodlights — soft grass thud
+		[62.0,  0.90, 55.0, 0.18],  # 0 offices   — muffled carpet: almost pure noise, no ring
+		[210.0, 0.50, 28.0, 0.22],  # 1 drowned   — wet tile: noise burst + medium resonance
+		[88.0,  0.40, 22.0, 0.24],  # 2 apartments — hollow floor: low body with some ring
+		[75.0,  0.25, 14.0, 0.26],  # 3 tunnels   — concrete: heavy body, long ring
+		[260.0, 0.10,  7.0, 0.30],  # 4 dead mall  — marble: sharp transient, very ringy
+		[70.0,  0.18,  6.0, 0.32],  # 5 stairwell  — stone: low body, very long ring
+		[52.0,  0.95, 65.0, 0.16],  # 6 floodlights — grass: soft noise burst, no ring
 	]
 	for p in params:
-		_step_sounds.append(_make_step_sound(p[0], p[1], p[2]))
+		_step_sounds.append(_make_step_sound(p[0], p[1], p[2], p[3]))
 
-func _make_step_sound(sharpness: float, body_hz: float, decay: float) -> AudioStreamWAV:
+# Synthesises one footstep impact.
+# Layers: initial transient + low-pass-filtered noise burst + multi-harmonic resonance.
+func _make_step_sound(body_hz: float, noise_mix: float, ring_decay: float, duration: float) -> AudioStreamWAV:
 	var rate := 22050
-	var count := int(rate * 0.22)
+	var count := int(rate * duration)
 	var data := PackedByteArray()
 	data.resize(count * 2)
 	var rng := RandomNumberGenerator.new()
-	rng.seed = int(body_hz * 97.0 + decay * 13.0)
+	rng.seed = int(body_hz * 113.0 + ring_decay * 17.0)
+	# Pre-fill raw noise buffer
+	var raw := PackedFloat32Array()
+	raw.resize(count)
+	for i in count:
+		raw[i] = rng.randf_range(-1.0, 1.0)
+	# Low-pass filter the noise — cutoff tracks body_hz so carpet stays
+	# thuddy and marble stays bright relative to each other.
+	var lp := clampf(body_hz * 3.5 / float(rate), 0.015, 0.35)
+	var filtered := 0.0
 	for i in count:
 		var t := float(i) / float(rate)
-		var env := exp(-t * (24.0 + sharpness * 72.0))
-		var body := sin(TAU * body_hz * t) * exp(-t * decay) * (1.0 - sharpness * 0.25)
-		var click := sin(TAU * 3400.0 * t) * exp(-t * 220.0) * sharpness
-		var noise := rng.randf_range(-1.0, 1.0) * exp(-t * (50.0 - sharpness * 40.0)) * maxf(0.0, 1.0 - sharpness) * 0.55
-		var s := clampf((env * 0.25 + body * 0.65 + click + noise) * 28000.0, -32767.0, 32767.0)
+		filtered = lerpf(filtered, raw[i], lp)
+		# Noise burst: loud at impact, decays quickly; carpet keeps it long
+		var noise_env := exp(-t * (12.0 + (1.0 - noise_mix) * 55.0))
+		var noise_sample := filtered * noise_env * noise_mix
+		# Resonance: three harmonics with natural amplitude ratios
+		var res_env1 := exp(-t * ring_decay)
+		var res_env2 := exp(-t * ring_decay * 2.1)
+		var res_env3 := exp(-t * ring_decay * 4.0)
+		var res := (sin(TAU * body_hz * t) * res_env1
+				  + sin(TAU * body_hz * 2.0 * t) * res_env2 * 0.42
+				  + sin(TAU * body_hz * 3.0 * t) * res_env3 * 0.16) * (1.0 - noise_mix * 0.75)
+		# Impact transient: ~1 ms broadband click at the very start
+		var transient := exp(-t * 900.0) * (0.25 + (1.0 - noise_mix) * 0.55)
+		var s := clampf((noise_sample + res + transient) * 26000.0, -32767.0, 32767.0)
 		data.encode_s16(i * 2, int(s))
 	var wav := AudioStreamWAV.new()
 	wav.format = AudioStreamWAV.FORMAT_16_BITS
@@ -194,8 +218,8 @@ func _play_step() -> void:
 		return
 	var idx := clampi(current_biome, 0, _step_sounds.size() - 1)
 	_step_player.stream = _step_sounds[idx]
-	_step_player.volume_db = -20.0 + randf_range(-2.5, 1.5)
-	_step_player.pitch_scale = 0.92 + randf_range(0.0, 0.16)
+	_step_player.volume_db = -19.0 + randf_range(-3.0, 1.0)
+	_step_player.pitch_scale = 0.93 + randf_range(0.0, 0.14)
 	_step_player.play()
 
 func _add_breathing() -> void:
