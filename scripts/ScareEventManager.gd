@@ -15,6 +15,7 @@ var _timer := 20.0
 var _last_anomaly_band := 999999
 var _last_event := -1
 var _rng := RandomNumberGenerator.new()
+var _stalker: Stalker
 
 func _ready() -> void:
 	_rng.randomize()
@@ -28,11 +29,15 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	_timer -= delta
 	if _timer <= 0.0:
-		var next_event := _rng.randi_range(0, EVENT_COUNT - 1)
-		while next_event == _last_event:
-			next_event = _rng.randi_range(0, EVENT_COUNT - 1)
-		_last_event = next_event
-		_run_event(next_event)
+		# Rare "stalker" scare (comparable odds to the ceiling collapse).
+		if not is_instance_valid(_stalker) and _rng.randf() < 0.13:
+			_trigger_stalker()
+		else:
+			var next_event := _rng.randi_range(0, EVENT_COUNT - 1)
+			while next_event == _last_event:
+				next_event = _rng.randi_range(0, EVENT_COUNT - 1)
+			_last_event = next_event
+			_run_event(next_event)
 		_timer = _rng.randf_range(24.0, 52.0)
 	# Invisible anomaly bands recur deep in the architecture.
 	var radial_distance := Vector2(player.global_position.x, player.global_position.z).length()
@@ -119,6 +124,18 @@ func _run_event(event_id: int) -> void:
 			level.spawn_phantom_door(player)
 			_spawn_shadow(7, true, 13.0)
 			sounds.silence_hum(4.2)
+
+## Knock behind the player; a tall black figure is now standing there. Turn to
+## face it and it knocks you off your feet.
+func _trigger_stalker() -> void:
+	var back := player.global_transform.basis.z.normalized()  # +Z is behind the camera
+	var spawn := player.global_position + back * 5.0
+	_stalker = Stalker.new()
+	_stalker.target = player
+	level.get_parent().add_child(_stalker)
+	_stalker.global_position = Vector3(spawn.x, 0.0, spawn.z)
+	sounds.play_knock_at(_stalker.global_position + Vector3(0, 1.0, 0))
+	atmosphere.pulse_anomaly(0.85)
 
 func _spawn_shadow(entity_variant := 0, in_front := false, forced_distance := -1.0) -> void:
 	if get_tree().get_first_node_in_group("shadow_entity"):

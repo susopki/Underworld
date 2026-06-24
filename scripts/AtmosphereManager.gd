@@ -29,7 +29,7 @@ func _ready() -> void:
 		env.tonemap_exposure = 0.88
 		env.tonemap_white = 1.0
 		env.adjustment_enabled = true
-		env.adjustment_brightness = 0.78
+		env.adjustment_brightness = 0.96
 		env.adjustment_contrast = 1.28
 		env.adjustment_saturation = 0.68
 		env.glow_enabled = true
@@ -38,6 +38,16 @@ func _ready() -> void:
 		env.glow_strength = 0.85
 		env.glow_bloom = 0.22
 		env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT
+		# Volumetric fog — gives real light scattering (beams/haloes) around every lamp.
+		env.volumetric_fog_enabled = true
+		env.volumetric_fog_density = 0.028
+		env.volumetric_fog_albedo = Color(0.42, 0.45, 0.36)
+		env.volumetric_fog_emission = Color(0.0, 0.0, 0.0)
+		env.volumetric_fog_emission_energy = 0.0
+		env.volumetric_fog_length = 72.0
+		env.volumetric_fog_detail_spread = 2.0
+		env.volumetric_fog_gi_inject = 1.0
+		env.volumetric_fog_ambient_inject = 0.0
 		world.environment = env
 		_environment = env
 
@@ -86,6 +96,18 @@ func set_zone(zone_id: int) -> void:
 	tween.tween_property(_environment, "fog_light_color", fog_colors[index], 2.2)
 	tween.tween_property(_environment, "ambient_light_color", ambient_colors[index], 2.2)
 	tween.tween_property(_environment, "fog_density", _base_fog_density(index), 2.2)
+	var vol_density: float = [0.024, 0.03, 0.026, 0.034, 0.022, 0.036, 0.05][index]
+	var vol_albedo: Color = [
+		Color(0.45, 0.42, 0.32),
+		Color(0.34, 0.46, 0.47),
+		Color(0.4, 0.32, 0.28),
+		Color(0.3, 0.34, 0.3),
+		Color(0.44, 0.42, 0.36),
+		Color(0.3, 0.34, 0.38),
+		Color(0.34, 0.52, 0.36),
+	][index]
+	tween.tween_property(_environment, "volumetric_fog_density", vol_density, 2.2)
+	_environment.volumetric_fog_albedo = vol_albedo
 	tween.tween_property(_environment, "adjustment_saturation", [0.68, 0.54, 0.48, 0.42, 0.58, 0.38, 0.52][index], 2.2)
 	tween.tween_property(_environment, "adjustment_contrast", [1.22, 1.34, 1.28, 1.42, 1.18, 1.5, 1.38][index], 2.2)
 	pulse_anomaly(0.72)

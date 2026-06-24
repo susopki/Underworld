@@ -43,7 +43,7 @@ func _build_flashlight() -> void:
 	_flashlight.spot_range = 13.0
 	_flashlight.spot_angle = 32.0
 	_flashlight.spot_attenuation = 1.4
-	_flashlight.shadow_enabled = true
+	_flashlight.shadow_enabled = false
 	_flashlight.position = Vector3(0.12, -0.18, 0.0)
 	_flashlight.visible = false
 	head.get_node("Camera3D").add_child(_flashlight)

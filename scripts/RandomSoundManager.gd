@@ -118,6 +118,10 @@ func play_close_knock() -> void:
 	var side := -1.0 if _rng.randf() < 0.5 else 1.0
 	_play_3d(_make_knock_pattern(), player.global_position + Vector3(side * _rng.randf_range(1.4, 2.4), 1.05, _rng.randf_range(-0.8, 1.6)), -10.0)
 
+## A single sharp knock at a world position (used for the stalker behind you).
+func play_knock_at(where: Vector3) -> void:
+	_play_3d(_make_knock_pattern(), where, -4.0)
+
 func play_ceiling_crawl() -> void:
 	_play_3d(_make_ceiling_crawl(), player.global_position + Vector3(randf_range(-2.8, 2.8), 2.9, randf_range(-3.2, 3.2)), -8.0)
 

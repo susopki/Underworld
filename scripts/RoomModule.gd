@@ -42,6 +42,9 @@ const EXTERNAL_PROPS := {
 	"wine_bottles":   "res://assets/models/polyhaven/wine_bottles_01/wine_bottles_01_1k.gltf",
 	"wooden_crate":   "res://assets/models/polyhaven/wooden_crate_01/wooden_crate_01_1k.gltf",
 	"wooden_crate2":  "res://assets/models/polyhaven/wooden_crate_02/wooden_crate_02_1k.gltf",
+	"street_lamp":    "res://assets/models/polyhaven/street_lamp_01/street_lamp_01_1k.gltf",
+	"street_lamp2":   "res://assets/models/polyhaven/street_lamp_02/street_lamp_02_1k.gltf",
+	"tire_pump":      "res://assets/models/polyhaven/tire_pump/tire_pump_1k.gltf",
 }
 # mass in kg — heavy props resist being knocked over
 const PROP_MASSES := {
@@ -52,6 +55,7 @@ const PROP_MASSES := {
 	"suitcase": 8.0, "fire_hydrant": 35.0, "alarm_clock": 2.0, "toolbox": 12.0, "trashbag": 4.0,
 	"ammo_box": 6.0, "military_crate": 22.0, "steel_shelf": 38.0,
 	"desk_lamp": 3.0, "hand_truck": 14.0, "wine_bottles": 1.2, "wooden_crate": 11.0, "wooden_crate2": 15.0,
+	"street_lamp": 80.0, "street_lamp2": 30.0, "tire_pump": 4.0,
 }
 # approximate collision box sizes in metres (unscaled)
 const PROP_COLLISION_SIZES := {
@@ -75,6 +79,8 @@ const PROP_COLLISION_SIZES := {
 	"desk_lamp": Vector3(0.20, 0.89, 0.61), "hand_truck": Vector3(0.59, 1.40, 0.69),
 	"wine_bottles": Vector3(0.18, 0.33, 0.18), "wooden_crate": Vector3(0.83, 0.35, 0.41),
 	"wooden_crate2": Vector3(0.53, 0.47, 1.17),
+	"street_lamp": Vector3(0.70, 3.87, 0.39), "street_lamp2": Vector3(0.39, 1.68, 0.81),
+	"tire_pump": Vector3(0.25, 0.58, 0.16),
 }
 
 # Large props that should NOT have physics (block doorways when fallen)
@@ -86,6 +92,8 @@ const STATIC_PROPS := [
 	"retail_rack",
 	"steel_shelf",
 	"fire_hydrant",
+	"street_lamp",
+	"street_lamp2",
 ]
 # Real downloaded crash sounds (first that exists wins; falls back to synthesis)
 const COLLAPSE_SOUNDS := ["res://audio/collapse.ogg", "res://audio/collapse.wav", "res://audio/collapse.mp3"]
@@ -334,7 +342,6 @@ func _add_external_downloaded_props() -> void:
 				_spawn_external_model("shelf", Vector3(3.88, 0.02, 1.9),  Vector3.ONE * 1.28, Vector3(0, -90, 0))
 				_spawn_external_model("box",   Vector3(2.95, 0.02, 1.2),  Vector3.ONE * 0.88, Vector3(0, 22, 0))
 				_spawn_external_model("box",   Vector3(2.65, 0.02, 2.55), Vector3.ONE * 0.78, Vector3(0, -8, 0))
-				_spawn_external_model("steel_shelf", Vector3(-3.9, 0.02, 3.5), Vector3.ONE * 1.0, Vector3(0, 90, 0))
 				if posmod(cell_seed, 3) == 1:
 					_spawn_external_model("alarm_clock", Vector3(3.7, 0.92, 1.9), Vector3.ONE * 1.0, Vector3(0, 20, 0))
 			else:
@@ -403,13 +410,15 @@ func _add_external_downloaded_props() -> void:
 			if posmod(cell_seed, 3) == 1:
 				_spawn_external_model("ladder", Vector3(-4.6, 0.02, 0.5), Vector3.ONE * 1.0, Vector3(8, 0, 0))
 			_spawn_external_model("fire_hydrant", Vector3(4.55, 0.02, 3.6), Vector3.ONE * 1.0, Vector3(0, -90, 0))
+			if posmod(cell_seed, 3) == 2:
+				_spawn_external_model("tire_pump", Vector3(3.0, 0.02, 3.8), Vector3.ONE * 1.0, Vector3(0, 40, 0))
+			if posmod(cell_seed, 5) == 0:
+				_spawn_external_model("street_lamp2", Vector3(-4.4, 0.02, 1.2), Vector3.ONE * 1.0, Vector3(0, 90, 0))
 			_spawn_external_model("wooden_crate", Vector3(3.4, 0.02, -0.8), Vector3.ONE * 1.0, Vector3(0, 28, 0))
 			if posmod(cell_seed, 2) == 1:
 				_spawn_external_model("wooden_crate2", Vector3(3.5, 0.45, -0.8), Vector3.ONE * 1.0, Vector3(0, -12, 0))
 			if posmod(cell_seed, 3) == 0:
 				_spawn_external_model("hand_truck", Vector3(-3.9, 0.02, 2.4), Vector3.ONE * 1.0, Vector3(0, 75, 0))
-			if posmod(cell_seed, 4) == 2:
-				_spawn_external_model("steel_shelf", Vector3(-4.5, 0.02, -3.4), Vector3.ONE * 1.0, Vector3(0, 90, 0))
 			# Tunnel extras
 			if posmod(cell_seed, 2) == 0:
 				_spawn_external_model("extinguisher", Vector3(-3.2, 0.03, 4.5), Vector3.ONE * 0.9, Vector3(0, 0, 0))
@@ -463,6 +472,19 @@ func _add_external_downloaded_props() -> void:
 			if posmod(cell_seed, 6) == 3:
 				_spawn_external_model("toolbox", Vector3(2.8, 0.02, 4.5), Vector3.ONE * 0.9, Vector3(0, 10, 0))
 
+## Largest per-axis mesh AABB size among all descendants (unscaled) — used to
+## detect assets exported at a broken unit scale.
+func _visual_extent(node: Node) -> Vector3:
+	var best := Vector3.ZERO
+	if node is MeshInstance3D and node.mesh:
+		best = node.mesh.get_aabb().size
+	for c in node.get_children():
+		var s := _visual_extent(c)
+		best.x = maxf(best.x, s.x)
+		best.y = maxf(best.y, s.y)
+		best.z = maxf(best.z, s.z)
+	return best
+
 func _spawn_external_model(prop_id: String, pos: Vector3, scale_value: Vector3, rotation_deg: Vector3) -> Node3D:
 	var path: String = EXTERNAL_PROPS.get(prop_id, "")
 	if path.is_empty() or not ResourceLoader.exists(path):
@@ -476,6 +498,12 @@ func _spawn_external_model(prop_id: String, pos: Vector3, scale_value: Vector3, 
 		return null
 	var visual := instance as Node3D
 	visual.scale = scale_value
+	# Guard against broken assets exported at the wrong unit scale (e.g. a model exported at the wrong unit scale (e.g. a model
+	# whose mesh spans tens of metres) — clamp anything absurd down to a sane size.
+	var raw := _visual_extent(visual)
+	var biggest: float = maxf(raw.x, maxf(raw.y, raw.z))
+	if biggest > 6.0:
+		visual.scale = scale_value * (2.2 / biggest)
 
 	# Deterministic random jitter per prop per room for variety
 	var jitter_seed := absi(grid_coord.x * 97 + grid_coord.y * 163 + prop_id.hash() * 37)
@@ -566,8 +594,8 @@ func _add_biome_geometry(palette: Array[Material]) -> void:
 				_add_box("WallCabinet", Vector3(5.0, 0.85, 0.45), Vector3(0.3, 2.2, -4.2), counter_mat, true)
 				_add_box("CabinetUnderline", Vector3(5.2, 0.03, 0.48), Vector3(0.3, 1.78, -4.18), _material(Color(0.02, 0.02, 0.02), 0.9), false)
 		1:
-			# Drowned Halls: water covers every room (shallow wading level).
-			_add_water("Water", room_size - 0.2, room_size - 0.2, 0.14)
+			# Drowned Halls: water covers every room at a deeper wading level.
+			_add_water("Water", room_size - 0.2, room_size - 0.2, 0.5)
 			if variant == 0:
 				for corner in [Vector3(-3.8, 1.8, -3.8), Vector3(3.8, 1.8, -3.8), Vector3(-3.8, 1.8, 3.8), Vector3(3.8, 1.8, 3.8)]:
 					_add_box("PoolColumn", Vector3(0.52, 3.6, 0.52), corner, palette[0], true)
@@ -813,8 +841,8 @@ func _palette() -> Array[Material]:
 		3: return [_material(Color(0.15, 0.17, 0.16)), _material(Color(0.055, 0.06, 0.055)), _material(Color(0.11, 0.12, 0.11))]
 		4: return [_material(Color(0.31, 0.285, 0.25)), _material(Color(0.18, 0.175, 0.16), 0.38), _material(Color(0.42, 0.4, 0.35))]
 		5: return [_material(Color(0.19, 0.205, 0.21)), _material(Color(0.075, 0.08, 0.085)), _material(Color(0.13, 0.14, 0.15))]
-		6: # Floodlights: muddy grass, worn white paint
-			return [_material(Color(0.08, 0.14, 0.06), 1.0), _material(Color(0.055, 0.095, 0.04), 1.0), _material(Color(0.18, 0.22, 0.15))]
+		6: # Floodlights: damp green pitch grass, worn white paint
+			return [_material(Color(0.10, 0.18, 0.08), 1.0), _material(Color(0.09, 0.17, 0.06), 1.0), _material(Color(0.2, 0.24, 0.16))]
 		_: return [preload("res://materials/wall.tres"), preload("res://materials/floor.tres"), preload("res://materials/ceiling.tres")]
 
 func _material(color: Color, roughness := 0.9) -> StandardMaterial3D:
@@ -1018,6 +1046,8 @@ func _build_floodlights_cell(palette: Array[Material]) -> void:
 	# Sparse props on sideline cells
 	if grid_coord.x == -9:
 		_build_treeline_cell(cell_seed, palette)
+		if posmod(grid_coord.y, 2) == 0:
+			_spawn_external_model("street_lamp", Vector3(4.2, 0.0, 0.0), Vector3.ONE * 1.0, Vector3(0, -90, 0))
 	else:
 		if posmod(cell_seed, 7) == 0:
 			_spawn_external_model("trashbag", Vector3(-4.0, 0.02, 3.5), Vector3.ONE * 1.0, Vector3(0, float(posmod(cell_seed, 36)) * 10.0, 0))
@@ -1069,25 +1099,29 @@ func _build_floodlight_mast(offset: Vector3, cell_seed: int) -> void:
 	# Crossarm
 	_add_box("MastArm", Vector3(2.4, 0.18, 0.18), offset + Vector3(0, 13.8, 0), steel, false)
 
-	# Floodlight heads — SpotLight3D, cold green-white, strong cone downward
-	var light_color := Color(0.72, 0.92, 0.76)
-	for dx in [-0.9, 0.0, 0.9]:
+	# Floodlight heads — SpotLight3D, cold green-white. Aimed inward across the
+	# pitch so the cones rake through the volumetric fog into visible beams.
+	var light_color := Color(0.78, 0.96, 0.82)
+	# Point the beams toward field centre (offset is at a cell corner/edge).
+	var aim_yaw := rad_to_deg(atan2(-offset.x, -offset.z))
+	for dx in [-1.0, 0.0, 1.0]:
 		var spot := SpotLight3D.new()
 		spot.name = "FloodSpot"
 		spot.light_color = light_color
-		spot.light_energy = 3.8 + float(posmod(cell_seed, 4)) * 0.35
-		spot.spot_range = 28.0
-		spot.spot_angle = 38.0
-		spot.spot_attenuation = 0.5
+		spot.light_energy = 7.0 + float(posmod(cell_seed, 4)) * 0.6
+		spot.spot_range = 46.0
+		spot.spot_angle = 30.0
+		spot.spot_attenuation = 0.35
 		spot.shadow_enabled = true
 		spot.position = offset + Vector3(dx, 14.2, 0)
-		spot.rotation_degrees = Vector3(-78.0, float(posmod(cell_seed + int(dx * 10), 24)) * 5.0, 0)
+		# ~55° down (more horizontal than before) so the beam travels far through fog.
+		spot.rotation_degrees = Vector3(-55.0, aim_yaw + float(dx) * 12.0, 0)
 		spot.add_to_group("liminal_lights")
 		add_child(spot)
 
-		# Emissive head box
-		var head_mat := _emissive_material(light_color, 4.5)
-		_add_box("LampHead", Vector3(0.55, 0.16, 0.38), offset + Vector3(dx, 13.85, 0), head_mat, false)
+		# Bright emissive head + soft glow halo box.
+		var head_mat := _emissive_material(light_color, 7.0)
+		_add_box("LampHead", Vector3(0.6, 0.18, 0.42), offset + Vector3(dx, 13.85, 0), head_mat, false)
 
 func _build_treeline_cell(cell_seed: int, _palette_unused: Array[Material]) -> void:
 	# Dark tree silhouettes — capsule + sphere, nearly black

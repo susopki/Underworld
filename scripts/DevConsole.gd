@@ -37,9 +37,12 @@ func _build_ui() -> void:
 	box.add_child(_entry)
 
 func _input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo and event.physical_keycode == KEY_QUOTELEFT:
-		_toggle()
-		get_viewport().set_input_as_handled()
+	if event is InputEventKey and event.pressed and not event.echo:
+		# Match the grave/backtick key across layouts (keycode, physical, unicode) + F1 fallback.
+		if event.physical_keycode == KEY_QUOTELEFT or event.keycode == KEY_QUOTELEFT \
+				or event.unicode == 96 or event.unicode == 126 or event.keycode == KEY_F1:
+			_toggle()
+			get_viewport().set_input_as_handled()
 
 func _toggle() -> void:
 	visible = not visible
