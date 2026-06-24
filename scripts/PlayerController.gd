@@ -132,7 +132,12 @@ func _try_step_up(delta: float) -> void:
 	# Headroom to lift, and path clear once raised → it's a climbable step, not a wall.
 	if test_move(global_transform, up):
 		return
-	if test_move(global_transform.translated(up), motion):
+	var raised := global_transform.translated(up)
+	if test_move(raised, motion):
+		return
+	# Only step up if there's solid ground to land on ahead (avoid climbing walls / stepping into air).
+	var forward := raised.translated(motion)
+	if not test_move(forward, Vector3.DOWN * (STEP_HEIGHT + 0.06)):
 		return
 	global_position += up
 

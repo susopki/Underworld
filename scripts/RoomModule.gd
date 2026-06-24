@@ -37,6 +37,11 @@ const EXTERNAL_PROPS := {
 	"ammo_box":       "res://assets/models/polyhaven/ammo_box/ammo_box_1k.gltf",
 	"military_crate": "res://assets/models/polyhaven/old_military_crate/old_military_crate_1k.gltf",
 	"steel_shelf":    "res://assets/models/polyhaven/steel_frame_shelves_01/steel_frame_shelves_01_1k.gltf",
+	"desk_lamp":      "res://assets/models/polyhaven/desk_lamp_arm_01/desk_lamp_arm_01_1k.gltf",
+	"hand_truck":     "res://assets/models/polyhaven/hand_truck/hand_truck_1k.gltf",
+	"wine_bottles":   "res://assets/models/polyhaven/wine_bottles_01/wine_bottles_01_1k.gltf",
+	"wooden_crate":   "res://assets/models/polyhaven/wooden_crate_01/wooden_crate_01_1k.gltf",
+	"wooden_crate2":  "res://assets/models/polyhaven/wooden_crate_02/wooden_crate_02_1k.gltf",
 }
 # mass in kg — heavy props resist being knocked over
 const PROP_MASSES := {
@@ -46,6 +51,7 @@ const PROP_MASSES := {
 	"potted_plant": 14.0, "bench": 24.0, "cash_register": 9.0, "coffee_cart": 60.0, "shop_shutter": 50.0, "retail_rack": 30.0,
 	"suitcase": 8.0, "fire_hydrant": 35.0, "alarm_clock": 2.0, "toolbox": 12.0, "trashbag": 4.0,
 	"ammo_box": 6.0, "military_crate": 22.0, "steel_shelf": 38.0,
+	"desk_lamp": 3.0, "hand_truck": 14.0, "wine_bottles": 1.2, "wooden_crate": 11.0, "wooden_crate2": 15.0,
 }
 # approximate collision box sizes in metres (unscaled)
 const PROP_COLLISION_SIZES := {
@@ -66,6 +72,9 @@ const PROP_COLLISION_SIZES := {
 	"alarm_clock": Vector3(0.14, 0.16, 0.10), "toolbox": Vector3(0.48, 0.24, 0.22),
 	"trashbag": Vector3(0.44, 0.55, 0.38), "ammo_box": Vector3(0.42, 0.22, 0.26),
 	"military_crate": Vector3(0.72, 0.44, 0.48), "steel_shelf": Vector3(0.56, 1.85, 0.36),
+	"desk_lamp": Vector3(0.20, 0.89, 0.61), "hand_truck": Vector3(0.59, 1.40, 0.69),
+	"wine_bottles": Vector3(0.18, 0.33, 0.18), "wooden_crate": Vector3(0.83, 0.35, 0.41),
+	"wooden_crate2": Vector3(0.53, 0.47, 1.17),
 }
 
 # Large props that should NOT have physics (block doorways when fallen)
@@ -319,11 +328,15 @@ func _add_external_downloaded_props() -> void:
 				_spawn_external_model("chair",  Vector3(-1.3,  0.02, -2.85), Vector3.ONE * 0.95, Vector3(0, 105, 0))
 				_spawn_external_model("laptop", Vector3(-2.65, 0.78, -2.7),  Vector3.ONE * 1.1,  Vector3(0, 90, 0))
 				_spawn_external_model("trash",  Vector3(-3.6,  0.02, -1.85), Vector3.ONE * 0.82, Vector3(0, 15, 0))
+				_spawn_external_model("desk_lamp", Vector3(-2.2, 0.78, -3.05), Vector3.ONE * 1.0, Vector3(0, -60, 0))
 			elif cluster == 1:
-				# Storage corner: shelf + boxes
+				# Storage corner: shelf + boxes + steel rack
 				_spawn_external_model("shelf", Vector3(3.88, 0.02, 1.9),  Vector3.ONE * 1.28, Vector3(0, -90, 0))
 				_spawn_external_model("box",   Vector3(2.95, 0.02, 1.2),  Vector3.ONE * 0.88, Vector3(0, 22, 0))
 				_spawn_external_model("box",   Vector3(2.65, 0.02, 2.55), Vector3.ONE * 0.78, Vector3(0, -8, 0))
+				_spawn_external_model("steel_shelf", Vector3(-3.9, 0.02, 3.5), Vector3.ONE * 1.0, Vector3(0, 90, 0))
+				if posmod(cell_seed, 3) == 1:
+					_spawn_external_model("alarm_clock", Vector3(3.7, 0.92, 1.9), Vector3.ONE * 1.0, Vector3(0, 20, 0))
 			else:
 				# Scattered: door + laptop on floor
 				_spawn_external_model("door",   Vector3(0.0,  0.03, 4.54), Vector3(1.35, 1.35, 1.15), Vector3(0, 180, 0))
@@ -375,6 +388,10 @@ func _add_external_downloaded_props() -> void:
 				_spawn_external_model("monobloc", Vector3(-2.8, 0.02, -1.5), Vector3.ONE * 0.85, Vector3(0, 80, 0))
 			if posmod(cell_seed, 5) == 1:
 				_spawn_external_model("radio", Vector3(-2.2, 0.75, 0.8), Vector3.ONE * 0.95, Vector3(0, -15, 5))
+				if posmod(cell_seed, 3) == 2:
+					_spawn_external_model("wine_bottles", Vector3(-1.4, 0.02, -3.1), Vector3.ONE * 1.0, Vector3(0, 0, 0))
+				if posmod(cell_seed, 4) == 3:
+					_spawn_external_model("desk_lamp", Vector3(2.5, 0.02, 2.6), Vector3.ONE * 1.0, Vector3(0, 30, 0))
 		3:
 			# Maintenance cluster: barrel + box + crowbar + ladder against wall
 			_spawn_external_model("barrel",  Vector3(3.95, 0.03, -2.85), Vector3.ONE * 0.85, Vector3(0, -20, 0))
@@ -385,6 +402,14 @@ func _add_external_downloaded_props() -> void:
 				_spawn_external_model("trash",   Vector3(-3.5, 0.03, -1.8),  Vector3.ONE * 0.85, Vector3(0, -15, 0))
 			if posmod(cell_seed, 3) == 1:
 				_spawn_external_model("ladder", Vector3(-4.6, 0.02, 0.5), Vector3.ONE * 1.0, Vector3(8, 0, 0))
+			_spawn_external_model("fire_hydrant", Vector3(4.55, 0.02, 3.6), Vector3.ONE * 1.0, Vector3(0, -90, 0))
+			_spawn_external_model("wooden_crate", Vector3(3.4, 0.02, -0.8), Vector3.ONE * 1.0, Vector3(0, 28, 0))
+			if posmod(cell_seed, 2) == 1:
+				_spawn_external_model("wooden_crate2", Vector3(3.5, 0.45, -0.8), Vector3.ONE * 1.0, Vector3(0, -12, 0))
+			if posmod(cell_seed, 3) == 0:
+				_spawn_external_model("hand_truck", Vector3(-3.9, 0.02, 2.4), Vector3.ONE * 1.0, Vector3(0, 75, 0))
+			if posmod(cell_seed, 4) == 2:
+				_spawn_external_model("steel_shelf", Vector3(-4.5, 0.02, -3.4), Vector3.ONE * 1.0, Vector3(0, 90, 0))
 			# Tunnel extras
 			if posmod(cell_seed, 2) == 0:
 				_spawn_external_model("extinguisher", Vector3(-3.2, 0.03, 4.5), Vector3.ONE * 0.9, Vector3(0, 0, 0))
@@ -419,6 +444,8 @@ func _add_external_downloaded_props() -> void:
 				_spawn_external_model("shop_shutter", Vector3(-4.78, 0.0, 2.4), Vector3.ONE * 1.0, Vector3(0, 90, 0))
 			if posmod(cell_seed, 3) == 0:
 				_spawn_external_model("monobloc", Vector3(-3.5, 0.02, 2.8), Vector3.ONE * 1.0, Vector3(0, 15, 0))
+				if posmod(cell_seed, 4) == 1:
+					_spawn_external_model("hand_truck", Vector3(3.6, 0.02, 3.4), Vector3.ONE * 1.0, Vector3(0, -120, 0))
 		5:
 			if posmod(cell_seed, 2) == 1:
 				_spawn_external_model("door",    Vector3(4.45, 0.03, -2.2), Vector3(1.0, 1.08, 0.9), Vector3(0, -90, 0))
@@ -722,7 +749,10 @@ func _add_atmosphere_effects() -> void:
 		particles.scale_amount_max = 0.12
 		particles.color = Color(0.3, 0.35, 0.32, 0.18)
 		add_child(particles)
-	# Floor mist layer — very thin, biome-tinted
+	# Floor mist layer — very thin, biome-tinted. Skipped in Drowned Halls: the
+	# water surface already covers the floor and the mist box only muddied it.
+	if biome == 1:
+		return
 	var mist_density := 0.08 + depth_factor * 0.06
 	var mist_colors: Array[Color] = [
 		Color(0.32, 0.28, 0.18, mist_density),
@@ -979,11 +1009,11 @@ func _build_floodlights_cell(palette: Array[Material]) -> void:
 	if abs(grid_coord.y) == 4 and posmod(grid_coord.x + 5, 3) == 0:
 		_build_goalpost()
 
-	# Floodlight mast — tall steel pole + broad beam head — placed at corners
-	if posmod(cell_seed, 4) == 0:
-		_build_floodlight_mast(Vector3(4.6, 0.0, 4.6), cell_seed)
-	elif posmod(cell_seed, 4) == 1:
-		_build_floodlight_mast(Vector3(-4.6, 0.0, 4.6), cell_seed)
+	# Floodlight masts only line the pitch perimeter (the two long sidelines),
+	# pushed to the outer edge of the cell — never scattered across the field.
+	if abs(grid_coord.y) == 4 and posmod(grid_coord.x, 3) == 0:
+		var edge_z := 4.6 if grid_coord.y > 0 else -4.6
+		_build_floodlight_mast(Vector3(0.0, 0.0, edge_z), cell_seed)
 
 	# Sparse props on sideline cells
 	if grid_coord.x == -9:

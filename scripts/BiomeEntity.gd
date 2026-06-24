@@ -41,7 +41,7 @@ func _process(delta: float) -> void:
 			look_at(Vector3(target.global_position.x, global_position.y, target.global_position.z), Vector3.UP)
 		5: # Hanging stairwell shape sways without approaching.
 			rotation.z = sin(Time.get_ticks_msec() * 0.0017) * 0.09
-	var vanish_distance: float = [6.0, 5.0, 7.5, 9.0, 8.0, 7.0][biome]
+	var vanish_distance: float = [6.0, 5.0, 7.5, 9.0, 8.0, 7.0, 9.0][posmod(biome, 7)]
 	if entity_variant == 1 or entity_variant == 6:
 		vanish_distance += 2.2
 	if distance < vanish_distance:

@@ -40,6 +40,41 @@ func _generate_level(level_id: int) -> void:
 		room.position = Vector3(cell.x * cell_size, 0, cell.y * cell_size)
 		generated_root.add_child(room)
 	_add_portal_at(portal_cell)
+	if current_level == 6:
+		_add_field_boundary()
+
+## The open Floodlights pitch has no walls — ring it with invisible collision
+## so the player can't walk off the field into the void.
+func _add_field_boundary() -> void:
+	var min_x := 9999
+	var max_x := -9999
+	var min_y := 9999
+	var max_y := -9999
+	for c in cells:
+		min_x = mini(min_x, c.x)
+		max_x = maxi(max_x, c.x)
+		min_y = mini(min_y, c.y)
+		max_y = maxi(max_y, c.y)
+	var x0 := (float(min_x) - 0.5) * cell_size
+	var x1 := (float(max_x) + 0.5) * cell_size
+	var z0 := (float(min_y) - 0.5) * cell_size
+	var z1 := (float(max_y) + 0.5) * cell_size
+	var h := 6.0
+	_add_invisible_wall(Vector3((x0 + x1) * 0.5, h * 0.5, z0), Vector3(x1 - x0, h, 0.4))
+	_add_invisible_wall(Vector3((x0 + x1) * 0.5, h * 0.5, z1), Vector3(x1 - x0, h, 0.4))
+	_add_invisible_wall(Vector3(x0, h * 0.5, (z0 + z1) * 0.5), Vector3(0.4, h, z1 - z0))
+	_add_invisible_wall(Vector3(x1, h * 0.5, (z0 + z1) * 0.5), Vector3(0.4, h, z1 - z0))
+
+func _add_invisible_wall(pos: Vector3, size: Vector3) -> void:
+	var body := StaticBody3D.new()
+	body.name = "FieldBoundary"
+	var col := CollisionShape3D.new()
+	var shape := BoxShape3D.new()
+	shape.size = size
+	col.shape = shape
+	body.add_child(col)
+	body.position = pos
+	generated_root.add_child(body)
 
 func _portal_cell() -> Vector2i:
 	var candidates := cells.duplicate()
