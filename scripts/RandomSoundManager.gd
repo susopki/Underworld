@@ -41,11 +41,10 @@ func _update_player_steps(delta: float) -> void:
 	if player.horizontal_speed() > 0.35 and player.is_on_floor():
 		_player_step_timer -= delta
 		if _player_step_timer <= 0.0:
+			# Footstep audio is handled by PlayerController (real samples);
+			# here we only add the visual water splash in the Drowned Halls.
 			if current_biome == 1:
-				_play_3d(_make_splash(), player.global_position + Vector3(0, 0.08, 0), -15.0)
 				_spawn_splash(player.global_position)
-			else:
-				_play_3d(_make_single_step(), player.global_position + Vector3(0, 0.08, 0), -30.0)
 			_player_step_timer = 0.58
 	else:
 		_player_step_timer = minf(_player_step_timer, 0.12)

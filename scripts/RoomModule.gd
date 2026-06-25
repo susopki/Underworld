@@ -473,6 +473,31 @@ func _add_external_downloaded_props() -> void:
 			if posmod(cell_seed, 6) == 3:
 				_spawn_external_model("toolbox", Vector3(2.8, 0.02, 4.5), Vector3.ONE * 0.9, Vector3(0, 10, 0))
 
+## Spawn a model as decorative debris floating (and bobbing) on the water surface.
+func _spawn_floating(prop_id: String, xz: Vector2, scale_value: Vector3, rot_deg: Vector3) -> void:
+	var path: String = EXTERNAL_PROPS.get(prop_id, "")
+	if path.is_empty() or not ResourceLoader.exists(path):
+		return
+	var res := load(path)
+	if not res is PackedScene:
+		return
+	var visual := (res as PackedScene).instantiate()
+	if not visual is Node3D:
+		visual.queue_free()
+		return
+	var v := visual as Node3D
+	v.scale = scale_value
+	var raw := _visual_extent(v)
+	var biggest: float = maxf(raw.x, maxf(raw.y, raw.z))
+	if biggest > 6.0:
+		v.scale = scale_value * (2.2 / biggest)
+	var floater := Floater.new()
+	floater.name = "Floating_%s" % prop_id
+	floater.position = Vector3(xz.x, 0.46, xz.y)
+	floater.rotation_degrees = rot_deg
+	add_child(floater)
+	floater.add_child(v)
+
 ## Largest per-axis mesh AABB size among all descendants (unscaled) — used to
 ## detect assets exported at a broken unit scale.
 func _visual_extent(node: Node) -> Vector3:
@@ -597,6 +622,15 @@ func _add_biome_geometry(palette: Array[Material]) -> void:
 		1:
 			# Drowned Halls: water covers every room at a deeper wading level.
 			_add_water("Water", room_size - 0.2, room_size - 0.2, 0.5)
+			# Debris floating on the surface.
+			var float_seed := absi(grid_coord.x * 53 + grid_coord.y * 97 + 11)
+			_spawn_floating("barrel", Vector2(-2.6, 1.8), Vector3.ONE * 0.85, Vector3(0, 20, 0))
+			if posmod(float_seed, 2) == 0:
+				_spawn_floating("box", Vector2(2.2, -1.4), Vector3.ONE * 0.8, Vector3(0, 40, 0))
+			if posmod(float_seed, 3) == 1:
+				_spawn_floating("wooden_crate", Vector2(1.2, 2.8), Vector3.ONE * 0.9, Vector3(0, -25, 0))
+			if posmod(float_seed, 3) == 2:
+				_spawn_floating("wine_bottles", Vector2(-1.2, -2.6), Vector3.ONE * 1.0, Vector3(0, 0, 0))
 			if variant == 0:
 				for corner in [Vector3(-3.8, 1.8, -3.8), Vector3(3.8, 1.8, -3.8), Vector3(-3.8, 1.8, 3.8), Vector3(3.8, 1.8, 3.8)]:
 					_add_box("PoolColumn", Vector3(0.52, 3.6, 0.52), corner, palette[0], true)

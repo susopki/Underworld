@@ -17,7 +17,7 @@ var _eyelids: ColorRect
 var _flashlight: SpotLight3D
 var current_biome := 0
 var _step_timer := 0.0
-var _step_sounds: Array[AudioStreamWAV] = []
+var _step_sounds: Array[AudioStream] = []
 var _step_player: AudioStreamPlayer
 
 func set_noclip(enabled: bool) -> void:
@@ -165,17 +165,31 @@ func _build_step_audio() -> void:
 	# noise_mix   — 1.0 = all filtered noise (carpet/grass), 0.0 = pure resonance (marble)
 	# ring_decay  — how fast the resonance fades (high = dull, low = ringy)
 	# duration    — total clip length
-	var params := [
-		[62.0,  0.90, 55.0, 0.18],  # 0 offices   — muffled carpet: almost pure noise, no ring
-		[210.0, 0.50, 28.0, 0.22],  # 1 drowned   — wet tile: noise burst + medium resonance
-		[88.0,  0.40, 22.0, 0.24],  # 2 apartments — hollow floor: low body with some ring
-		[75.0,  0.25, 14.0, 0.26],  # 3 tunnels   — concrete: heavy body, long ring
-		[260.0, 0.10,  7.0, 0.30],  # 4 dead mall  — marble: sharp transient, very ringy
-		[70.0,  0.18,  6.0, 0.32],  # 5 stairwell  — stone: low body, very long ring
-		[52.0,  0.95, 65.0, 0.16],  # 6 floodlights — grass: soft noise burst, no ring
+	# Real downloaded CC0 footsteps per biome surface, with a synth fallback.
+	var files := [
+		"res://audio/step_concrete.ogg",  # 0 offices
+		"res://audio/step_wet.ogg",        # 1 drowned (wading)
+		"res://audio/step_wood.ogg",       # 2 apartments
+		"res://audio/step_concrete.ogg",   # 3 tunnels
+		"res://audio/step_concrete.ogg",   # 4 dead mall
+		"res://audio/step_concrete.ogg",   # 5 stairwell
+		"res://audio/step_grass.ogg",      # 6 floodlights
 	]
-	for p in params:
-		_step_sounds.append(_make_step_sound(p[0], p[1], p[2], p[3]))
+	var params := [
+		[62.0,  0.90, 55.0, 0.18],
+		[210.0, 0.50, 28.0, 0.22],
+		[88.0,  0.40, 22.0, 0.24],
+		[75.0,  0.25, 14.0, 0.26],
+		[260.0, 0.10,  7.0, 0.30],
+		[70.0,  0.18,  6.0, 0.32],
+		[52.0,  0.95, 65.0, 0.16],
+	]
+	for i in files.size():
+		if ResourceLoader.exists(files[i]):
+			_step_sounds.append(load(files[i]))
+		else:
+			var p: Array = params[i]
+			_step_sounds.append(_make_step_sound(p[0], p[1], p[2], p[3]))
 
 # Synthesises one footstep impact.
 # Layers: initial transient + low-pass-filtered noise burst + multi-harmonic resonance.
