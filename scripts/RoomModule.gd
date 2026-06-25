@@ -94,6 +94,7 @@ const STATIC_PROPS := [
 	"fire_hydrant",
 	"street_lamp",
 	"street_lamp2",
+	"desk_lamp",
 ]
 # Real downloaded crash sounds (first that exists wins; falls back to synthesis)
 const COLLAPSE_SOUNDS := ["res://audio/collapse.ogg", "res://audio/collapse.wav", "res://audio/collapse.mp3"]
