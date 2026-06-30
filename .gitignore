@@ -1,5 +1,6 @@
 # Godot generated data
 .godot/
+.build/
 *.tmp
 
 # Exported builds
@@ -14,4 +15,3 @@ exports/
 .idea/
 .DS_Store
 Thumbs.db
-

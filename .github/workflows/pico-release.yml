@@ -1,0 +1,125 @@
+name: Pico APK Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "pico-vr-*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-pico-apk:
+    runs-on: ubuntu-24.04
+
+    env:
+      GODOT_VERSION: "4.6.3"
+      GODOT_STATUS: "stable"
+      EXPORT_PRESET: "Pico Android XR"
+      APK_PATH: "builds/pico/underworld-pico.apk"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android packages
+        run: |
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Download Godot
+        run: |
+          set -euxo pipefail
+          GODOT_TAG="${GODOT_VERSION}-${GODOT_STATUS}"
+          GODOT_BASE="Godot_v${GODOT_VERSION}-${GODOT_STATUS}"
+          curl -L --retry 3 -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_TAG}/${GODOT_BASE}_linux.x86_64.zip"
+          unzip -q godot.zip
+          mv "${GODOT_BASE}_linux.x86_64" godot
+          chmod +x godot
+
+      - name: Install Godot Android export templates
+        run: |
+          set -euxo pipefail
+          GODOT_TAG="${GODOT_VERSION}-${GODOT_STATUS}"
+          GODOT_BASE="Godot_v${GODOT_VERSION}-${GODOT_STATUS}"
+          curl -L --retry 3 -o export_templates.tpz "https://github.com/godotengine/godot/releases/download/${GODOT_TAG}/${GODOT_BASE}_export_templates.tpz"
+          unzip -q export_templates.tpz -d export_templates
+          mkdir -p "${HOME}/.local/share/godot/export_templates/${GODOT_VERSION}.${GODOT_STATUS}"
+          cp export_templates/templates/* "${HOME}/.local/share/godot/export_templates/${GODOT_VERSION}.${GODOT_STATUS}/"
+
+      - name: Configure Godot Android export
+        run: |
+          set -euxo pipefail
+          mkdir -p "${HOME}/.config/godot" "${HOME}/.local/share/godot/keystores"
+          keytool -genkeypair -v \
+            -keystore "${HOME}/.local/share/godot/keystores/debug.keystore" \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Underworld,O=Underworld,C=RU"
+          cat > "${HOME}/.config/godot/editor_settings-4.6.tres" <<EOF
+          [gd_resource type="EditorSettings" format=3]
+
+          [resource]
+          export/android/android_sdk_path = "${ANDROID_HOME}"
+          export/android/java_sdk_path = "${JAVA_HOME}"
+          export/android/debug_keystore = "${HOME}/.local/share/godot/keystores/debug.keystore"
+          export/android/debug_keystore_user = "androiddebugkey"
+          export/android/debug_keystore_pass = "android"
+          EOF
+
+      - name: Switch project to Pico VR entrypoint
+        run: |
+          set -euxo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("project.godot")
+          text = p.read_text()
+          text = text.replace('run/main_scene="res://scenes/Intro.tscn"', 'run/main_scene="res://scenes/MainVR.tscn"')
+          text = text.replace('renderer/rendering_method.mobile="gl_compatibility"', 'renderer/rendering_method.mobile="mobile"')
+          if "[xr]" not in text:
+              text += '\n[xr]\n\nxr/openxr/enabled=true\nxr/openxr/startup_alert=false\n'
+          p.write_text(text)
+          PY
+
+      - name: Export Pico APK
+        run: |
+          set -euxo pipefail
+          mkdir -p builds/pico
+          ./godot --headless --path . --editor --quit
+          ./godot --headless --path . --export-debug "${EXPORT_PRESET}" "${APK_PATH}"
+          ls -lh "${APK_PATH}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: underworld-pico-apk
+          path: ${{ env.APK_PATH }}
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.APK_PATH }}
+          name: Underworld Pico VR ${{ github.ref_name }}
+          body: |
+            Pico sideload APK for Underworld VR.
+
+            Target devices:
+            - Pico Neo 3
+            - Pico 4
+
+            Install manually with:
+            `adb install -r underworld-pico.apk`
