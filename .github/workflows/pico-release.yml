@@ -89,6 +89,8 @@ jobs:
           text = p.read_text()
           text = text.replace('run/main_scene="res://scenes/Intro.tscn"', 'run/main_scene="res://scenes/MainVR.tscn"')
           text = text.replace('renderer/rendering_method.mobile="gl_compatibility"', 'renderer/rendering_method.mobile="mobile"')
+          if 'textures/vram_compression/import_etc2_astc=true' not in text:
+              text = text.replace('[rendering]\\n\\n', '[rendering]\\n\\ntextures/vram_compression/import_etc2_astc=true\\n')
           if "[xr]" not in text:
               text += '\n[xr]\n\nxr/openxr/enabled=true\nxr/openxr/startup_alert=false\n'
           p.write_text(text)
