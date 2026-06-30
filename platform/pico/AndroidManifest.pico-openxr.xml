@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Pico OpenXR manifest template for Underworld.
+
+  Put the important entries from this file into the Godot Android custom build
+  manifest after installing Android build templates.
+
+  Target devices: Pico Neo 3 / Pico 4.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.underworld.vr.pico"
+    android:installLocation="auto">
+
+    <uses-sdk android:minSdkVersion="29" android:targetSdkVersion="35" />
+
+    <!-- Khronos / Android XR discovery. -->
+    <uses-permission android:name="org.khronos.openxr.permission.OPENXR" />
+    <uses-feature android:name="android.hardware.vr.headtracking" android:required="true" android:version="1" />
+    <uses-feature android:name="android.software.xr.api.openxr" android:version="0x00010000" android:required="true" />
+    <uses-feature android:name="android.hardware.xr.input.controller" android:required="true" />
+
+    <application
+        android:label="Underworld"
+        android:appCategory="game"
+        android:isGame="true"
+        android:resizeableActivity="false"
+        android:theme="@style/GodotAppMainTheme">
+
+        <!-- Android XR / OpenXR full-space launch hint. -->
+        <property
+            android:name="android.window.PROPERTY_XR_ACTIVITY_START_MODE"
+            android:value="XR_ACTIVITY_START_MODE_FULL_SPACE_UNMANAGED" />
+        <property
+            android:name="android.window.PROPERTY_XR_BOUNDARY_TYPE_RECOMMENDED"
+            android:value="XR_BOUNDARY_TYPE_NO_RECOMMENDATION" />
+
+        <!-- Android 12+ native runtime discovery. Godot/Pico may provide a different loader in final export. -->
+        <uses-native-library android:name="libopenxr.google.so" android:required="false" />
+        <uses-native-library android:name="libopenxr_loader.so" android:required="false" />
+
+        <!-- Pico: this is the important flag that marks the app as VR content. -->
+        <meta-data android:name="pvr.app.type" android:value="vr" />
+        <meta-data android:name="pvr.sdk.version" android:value="OpenXR" />
+
+        <!-- Godot Android custom template normally owns the exact activity class.
+             Keep these intent categories on the main Godot activity. -->
+        <activity
+            android:name="org.godotengine.godot.GodotApp"
+            android:exported="true"
+            android:screenOrientation="landscape"
+            android:launchMode="singleTask"
+            android:configChanges="orientation|keyboardHidden|screenSize|smallestScreenSize|density|keyboard|navigation|screenLayout|uiMode">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+
+                <!-- Standard OpenXR immersive headset category. -->
+                <category android:name="org.khronos.openxr.intent.category.IMMERSIVE_HMD" />
+
+                <!-- Pico launcher category: prevents Pico from treating this as a flat 2D app. -->
+                <category android:name="com.picovr.intent.category.VR" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
