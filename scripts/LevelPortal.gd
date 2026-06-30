@@ -9,7 +9,6 @@ func _ready() -> void:
 	body_entered.connect(_on_body_entered)
 
 func _on_body_entered(body: Node3D) -> void:
-	if active and body is PlayerController:
+	if active and (body is PlayerController or body is VRPlayerController or body.is_in_group("player")):
 		active = false
 		portal_entered.emit(target_level)
-

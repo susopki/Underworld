@@ -915,7 +915,7 @@ func _maybe_setup_collapse() -> void:
 	area.body_entered.connect(_on_collapse_entered)
 
 func _on_collapse_entered(body: Node3D) -> void:
-	if _collapsed or not body is PlayerController:
+	if _collapsed or not (body is PlayerController or body is VRPlayerController or body.is_in_group("player")):
 		return
 	_collapsed = true
 	_play_collapse_sound()

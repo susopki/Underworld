@@ -1,7 +1,7 @@
 class_name RandomSoundManager
 extends Node3D
 
-var player: PlayerController
+var player: Node3D
 var current_biome := 0
 var _timer := 8.0
 var _player_step_timer := 0.0
@@ -38,7 +38,7 @@ func _start_ambience() -> void:
 func _update_player_steps(delta: float) -> void:
 	if not player:
 		return
-	if player.horizontal_speed() > 0.35 and player.is_on_floor():
+	if player.has_method("horizontal_speed") and player.has_method("is_on_floor") and player.horizontal_speed() > 0.35 and player.is_on_floor():
 		_player_step_timer -= delta
 		if _player_step_timer <= 0.0:
 			# Footstep audio is handled by PlayerController (real samples);

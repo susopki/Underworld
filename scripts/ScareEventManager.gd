@@ -7,7 +7,7 @@ const EVENT_COUNT := 22
 @export var level_path: NodePath
 @export var sound_path: NodePath
 @export var atmosphere_path: NodePath
-var player: PlayerController
+var player: Node3D
 var level: LevelGenerator
 var sounds: RandomSoundManager
 var atmosphere: AtmosphereManager

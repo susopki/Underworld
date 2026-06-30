@@ -325,11 +325,13 @@ func _perform_switch(target: int) -> void:
 	if generated_root:
 		generated_root.queue_free()
 	_generate_level(target)
-	var player := get_node_or_null(player_path) as PlayerController
+	var player := get_node_or_null(player_path) as Node3D
 	if player:
 		player.global_position = Vector3(0, 0.05, 0)
-		player.velocity = Vector3.ZERO
-		player.set_biome(current_level)
+		if player is CharacterBody3D:
+			(player as CharacterBody3D).velocity = Vector3.ZERO
+		if player.has_method("set_biome"):
+			player.set_biome(current_level)
 	var atmosphere := get_tree().get_first_node_in_group("atmosphere") as AtmosphereManager
 	if atmosphere:
 		atmosphere.set_zone(current_level)
