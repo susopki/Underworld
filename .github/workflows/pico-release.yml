@@ -97,6 +97,8 @@ jobs:
           target_scene = 'res://scenes/PicoXRDiagnostic.tscn' if diag else 'res://scenes/xr_main.tscn'
           text = text.replace('run/main_scene="res://scenes/Intro.tscn"', f'run/main_scene="{target_scene}"')
           text = text.replace('run/main_scene="res://scenes/MainVR.tscn"', f'run/main_scene="{target_scene}"')
+          text = text.replace('MCPRuntime="*uid://c6h0mrylm1vnd"\\n', '')
+          text = text.replace('DevConsole="*res://scripts/DevConsole.gd"\\n', '')
           text = text.replace('renderer/rendering_method.mobile="gl_compatibility"', 'renderer/rendering_method.mobile="mobile"')
           if 'textures/vram_compression/import_etc2_astc=true' not in text:
               text = text.replace('[rendering]\\n\\n', '[rendering]\\n\\ntextures/vram_compression/import_etc2_astc=true\\n')
