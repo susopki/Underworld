@@ -106,7 +106,8 @@ jobs:
         run: |
           set -euxo pipefail
           rm -rf android
-          ./godot --headless --path . --install-android-build-template --quit
+          mkdir -p builds/pico
+          ./godot --headless --path . --install-android-build-template --export-debug "${EXPORT_PRESET}" "builds/pico/template-bootstrap.apk" || true
           find android -maxdepth 6 -type f | sort
           MANIFEST_PATH="$(find android -type f -name AndroidManifest.xml | head -n 1)"
           test -n "${MANIFEST_PATH}"
