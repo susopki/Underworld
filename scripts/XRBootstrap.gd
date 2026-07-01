@@ -1,9 +1,12 @@
 class_name XRBootstrap
 extends Node
 
+signal xr_ready
+signal xr_failed
+
 @export var target_fps := 72
 @export var fallback_scene := "res://scenes/Main.tscn"
-@export var startup_retry_seconds := 8.0
+@export var startup_retry_seconds := 20.0
 @export var retry_interval := 0.35
 
 var xr_interface: XRInterface
@@ -34,11 +37,13 @@ func _start_openxr() -> void:
 	get_viewport().transparent_bg = false
 	_xr_ready = true
 	print("Underworld Pico/OpenXR session started")
+	xr_ready.emit()
 
 func _retry_or_continue() -> void:
 	_startup_elapsed += retry_interval
 	if _startup_elapsed >= startup_retry_seconds:
-		push_warning("OpenXR did not initialize before timeout. Continuing scene without blocking.")
+		push_error("OpenXR did not initialize before timeout.")
+		xr_failed.emit()
 		return
 	get_tree().create_timer(retry_interval).timeout.connect(_start_openxr)
 

@@ -29,7 +29,7 @@ window/stretch/mode="canvas_items"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/auto_reload/plugin.cfg", "res://addons/godot_mcp_editor/plugin.cfg", "res://addons/godot_mcp_runtime/plugin.cfg", "res://addons/godotopenxrvendors/plugin.gdextension", "res://addons/pico_vr_manifest/plugin.cfg")
+enabled=PackedStringArray("res://addons/auto_reload/plugin.cfg", "res://addons/godot_mcp_editor/plugin.cfg", "res://addons/godot_mcp_runtime/plugin.cfg", "res://addons/godotopenxrvendors/plugin.gdextension")
 
 [input]
 
@@ -69,3 +69,9 @@ renderer/rendering_method="forward_plus"
 renderer/rendering_method.mobile="gl_compatibility"
 environment/defaults/default_clear_color=Color(0.035, 0.032, 0.02, 1)
 textures/vram_compression/import_etc2_astc=true
+
+[xr]
+
+xr/openxr/enabled=true
+xr/openxr/startup_alert=false
+xr/shaders/enabled=true

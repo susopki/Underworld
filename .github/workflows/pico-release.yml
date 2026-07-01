@@ -98,22 +98,28 @@ jobs:
           if 'textures/vram_compression/import_etc2_astc=true' not in text:
               text = text.replace('[rendering]\\n\\n', '[rendering]\\n\\ntextures/vram_compression/import_etc2_astc=true\\n')
           if "[xr]" not in text:
-              text += '\n[xr]\n\nxr/openxr/enabled=true\nxr/openxr/startup_alert=false\n'
+              text += '\n[xr]\n\n'
+          for key, value in {
+              'xr/openxr/enabled': 'true',
+              'xr/openxr/startup_alert': 'false',
+              'xr/shaders/enabled': 'true',
+          }.items():
+              line = f'{key}={value}'
+              if key not in text:
+                  text += line + '\n'
+              else:
+                  import re
+                  text = re.sub(rf'^{re.escape(key)}=.*$', line, text, flags=re.MULTILINE)
           p.write_text(text)
           PY
 
-      - name: Install and patch Godot Android Gradle template for Pico VR
+      - name: Install Godot Android Gradle template
         run: |
           set -euxo pipefail
           rm -rf android
           mkdir -p builds/pico
           ./godot --headless --path . --install-android-build-template --export-debug "${EXPORT_PRESET}" "builds/pico/template-bootstrap.apk" || true
-          find android -maxdepth 6 -type f | sort
-          MANIFEST_PATH="$(find android -type f -name AndroidManifest.xml | head -n 1)"
-          test -n "${MANIFEST_PATH}"
-          python3 platform/pico/patch_godot_android_manifest.py "${MANIFEST_PATH}"
-          grep -n "pvr.app.type" "${MANIFEST_PATH}"
-          grep -n "com.picovr.intent.category.VR" "${MANIFEST_PATH}"
+          test -d android
 
       - name: Export Pico APK
         run: |
@@ -143,7 +149,6 @@ jobs:
           required = [
               "pvr.app.type",
               "pvr.sdk.version",
-              "com.picovr.intent.category.VR",
               "org.khronos.openxr.intent.category.IMMERSIVE_HMD",
           ]
           missing = [
