@@ -126,12 +126,31 @@ jobs:
       - name: Verify final APK is marked as Pico VR
         run: |
           set -euxo pipefail
-          AAPT2="${ANDROID_HOME}/build-tools/35.0.1/aapt2"
-          "${AAPT2}" dump xmltree "${APK_PATH}" --file AndroidManifest.xml > builds/pico/manifest-dump.txt
-          grep -q "pvr.app.type" builds/pico/manifest-dump.txt
-          grep -q "com.picovr.intent.category.VR" builds/pico/manifest-dump.txt
-          grep -q "org.khronos.openxr.intent.category.IMMERSIVE_HMD" builds/pico/manifest-dump.txt
-          sed -n '/pvr.app.type/,+8p' builds/pico/manifest-dump.txt
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+          import zipfile
+
+          apk = Path(os.environ["APK_PATH"])
+          out = Path("builds/pico/AndroidManifest.bin")
+          with zipfile.ZipFile(apk) as zf:
+              out.write_bytes(zf.read("AndroidManifest.xml"))
+
+          data = out.read_bytes()
+          required = [
+              "pvr.app.type",
+              "pvr.sdk.version",
+              "com.picovr.intent.category.VR",
+              "org.khronos.openxr.intent.category.IMMERSIVE_HMD",
+          ]
+          missing = [
+              item for item in required
+              if item.encode("utf-8") not in data and item.encode("utf-16le") not in data
+          ]
+          if missing:
+              raise SystemExit(f"APK AndroidManifest.xml is missing Pico/OpenXR markers: {missing}")
+          print("APK AndroidManifest.xml contains Pico/OpenXR VR markers.")
+          PY
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
