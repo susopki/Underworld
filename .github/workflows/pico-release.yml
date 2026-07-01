@@ -42,11 +42,6 @@ jobs:
             "cmake;3.10.2.4988404" \
             "ndk;28.1.13356709"
 
-      - name: Install APK patch tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y apktool
-
       - name: Download Godot
         run: |
           set -euxo pipefail
@@ -126,29 +121,6 @@ jobs:
           mkdir -p builds/pico
           ./godot --headless --path . --editor --quit
           ./godot --headless --path . --export-debug "${EXPORT_PRESET}" "${APK_PATH}"
-          ls -lh "${APK_PATH}"
-
-      - name: Patch exported APK manifest for Pico VR
-        run: |
-          set -euxo pipefail
-          PATCH_DIR="builds/pico/apktool"
-          UNSIGNED_APK="builds/pico/underworld-pico-patched-unsigned.apk"
-          ALIGNED_APK="builds/pico/underworld-pico-patched-aligned.apk"
-          rm -rf "${PATCH_DIR}"
-          apktool d -f "${APK_PATH}" -o "${PATCH_DIR}"
-          python3 platform/pico/patch_godot_android_manifest.py "${PATCH_DIR}/AndroidManifest.xml"
-          grep -n "pvr.app.type" "${PATCH_DIR}/AndroidManifest.xml"
-          grep -n "com.picovr.intent.category.VR" "${PATCH_DIR}/AndroidManifest.xml"
-          apktool b "${PATCH_DIR}" -o "${UNSIGNED_APK}"
-          "${ANDROID_HOME}/build-tools/35.0.1/zipalign" -f -p 4 "${UNSIGNED_APK}" "${ALIGNED_APK}"
-          "${ANDROID_HOME}/build-tools/35.0.1/apksigner" sign \
-            --ks "${HOME}/.local/share/godot/keystores/debug.keystore" \
-            --ks-key-alias androiddebugkey \
-            --ks-pass pass:android \
-            --key-pass pass:android \
-            --out "${APK_PATH}" \
-            "${ALIGNED_APK}"
-          "${ANDROID_HOME}/build-tools/35.0.1/apksigner" verify --verbose "${APK_PATH}"
           ls -lh "${APK_PATH}"
 
       - name: Verify final APK is marked as Pico VR
