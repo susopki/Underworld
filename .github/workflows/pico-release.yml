@@ -94,7 +94,7 @@ jobs:
           p = Path("project.godot")
           text = p.read_text()
           diag = 'diagnostic' in '${{ github.ref_name }}'
-          target_scene = 'res://scenes/PicoXRDiagnostic.tscn' if diag else 'res://scenes/MainVR.tscn'
+          target_scene = 'res://scenes/PicoXRDiagnostic.tscn' if diag else 'res://scenes/xr_main.tscn'
           text = text.replace('run/main_scene="res://scenes/Intro.tscn"', f'run/main_scene="{target_scene}"')
           text = text.replace('run/main_scene="res://scenes/MainVR.tscn"', f'run/main_scene="{target_scene}"')
           text = text.replace('renderer/rendering_method.mobile="gl_compatibility"', 'renderer/rendering_method.mobile="mobile"')

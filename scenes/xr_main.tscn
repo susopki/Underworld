@@ -1,0 +1,43 @@
+[gd_scene load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://scripts/Main.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/LevelGenerator.gd" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/PlayerVR.tscn" id="3"]
+[ext_resource type="Script" path="res://scripts/RandomSoundManager.gd" id="4"]
+[ext_resource type="Script" path="res://scripts/ScareEventManager.gd" id="5"]
+[ext_resource type="Script" path="res://scripts/AtmosphereManager.gd" id="6"]
+[ext_resource type="Script" path="res://start_xr.gd" id="7"]
+
+[node name="XRMain" type="Node3D"]
+script = ExtResource("1")
+
+[node name="StartXR" type="Node" parent="."]
+script = ExtResource("7")
+maximum_refresh_rate = 72
+quit_if_openxr_missing = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+
+[node name="LevelGenerator" type="Node3D" parent="."]
+script = ExtResource("2")
+player_path = NodePath("../PlayerVR")
+use_vr_optimized_counts = true
+
+[node name="PlayerVR" parent="." instance=ExtResource("3")]
+position = Vector3(0, 0.05, -2)
+
+[node name="RandomSoundManager" type="Node3D" parent="."]
+script = ExtResource("4")
+groups = ["sound_manager"]
+
+[node name="AtmosphereManager" type="Node" parent="."]
+script = ExtResource("6")
+groups = ["atmosphere"]
+world_environment_path = NodePath("../WorldEnvironment")
+
+[node name="ScareEventManager" type="Node" parent="."]
+script = ExtResource("5")
+player_path = NodePath("../PlayerVR")
+level_path = NodePath("../LevelGenerator")
+sound_path = NodePath("../RandomSoundManager")
+atmosphere_path = NodePath("../AtmosphereManager")

@@ -75,3 +75,8 @@ textures/vram_compression/import_etc2_astc=true
 xr/openxr/enabled=true
 xr/openxr/startup_alert=false
 xr/shaders/enabled=true
+
+[godot_openxr_vendors]
+
+godot_openxr_vendors:request_run_scene=true
+godot_openxr_vendors:request_stop_xrs_client_on_session_end=true
