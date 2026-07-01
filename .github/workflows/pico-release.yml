@@ -137,6 +137,9 @@ jobs:
               out.write_bytes(zf.read("AndroidManifest.xml"))
 
           data = out.read_bytes()
+          apk_names = set()
+          with zipfile.ZipFile(apk) as zf:
+              apk_names = set(zf.namelist())
           required = [
               "pvr.app.type",
               "pvr.sdk.version",
@@ -149,7 +152,10 @@ jobs:
           ]
           if missing:
               raise SystemExit(f"APK AndroidManifest.xml is missing Pico/OpenXR markers: {missing}")
+          if "lib/arm64-v8a/libgodotopenxrvendors.so" not in apk_names:
+              raise SystemExit("APK is missing Godot OpenXR Vendors native library.")
           print("APK AndroidManifest.xml contains Pico/OpenXR VR markers.")
+          print("APK contains Godot OpenXR Vendors native library.")
           PY
 
       - name: Upload artifact
