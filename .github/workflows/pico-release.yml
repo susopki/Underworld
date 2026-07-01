@@ -107,10 +107,12 @@ jobs:
           set -euxo pipefail
           rm -rf android
           ./godot --headless --path . --install-android-build-template --quit
-          test -f android/build/AndroidManifest.xml
-          python3 platform/pico/patch_godot_android_manifest.py android/build/AndroidManifest.xml
-          grep -n "pvr.app.type" android/build/AndroidManifest.xml
-          grep -n "com.picovr.intent.category.VR" android/build/AndroidManifest.xml
+          find android -maxdepth 6 -type f | sort
+          MANIFEST_PATH="$(find android -type f -name AndroidManifest.xml | head -n 1)"
+          test -n "${MANIFEST_PATH}"
+          python3 platform/pico/patch_godot_android_manifest.py "${MANIFEST_PATH}"
+          grep -n "pvr.app.type" "${MANIFEST_PATH}"
+          grep -n "com.picovr.intent.category.VR" "${MANIFEST_PATH}"
 
       - name: Export Pico APK
         run: |
