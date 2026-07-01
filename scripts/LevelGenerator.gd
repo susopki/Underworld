@@ -4,8 +4,10 @@ extends Node3D
 const ROOM := preload("res://scenes/RoomModule.tscn")
 const BIOME_COUNT := 7
 const BIOME_ROOM_COUNTS := [42, 35, 46, 28, 52, 20, 60]
+const VR_ROOM_COUNTS := [18, 15, 20, 14, 22, 12, 24]
 @export var player_path: NodePath
 @export var cell_size := 10.0
+@export var use_vr_optimized_counts := true
 
 var current_level := 0
 var room_count := 42
@@ -21,7 +23,7 @@ func _ready() -> void:
 
 func _generate_level(level_id: int) -> void:
 	current_level = posmod(level_id, BIOME_COUNT)
-	room_count = BIOME_ROOM_COUNTS[current_level]
+	room_count = _room_count_for(current_level)
 	generated_root = Node3D.new()
 	generated_root.name = ["YellowOffices", "DrownedHalls", "SilentApartments", "UnderpassTunnels", "DeadMall", "EndlessStairwell", "Floodlights"][current_level]
 	add_child(generated_root)
@@ -42,6 +44,11 @@ func _generate_level(level_id: int) -> void:
 	_add_portal_at(portal_cell)
 	if current_level == 6:
 		_add_field_boundary()
+
+func _room_count_for(level_id: int) -> int:
+	if use_vr_optimized_counts and OS.get_name() == "Android":
+		return VR_ROOM_COUNTS[level_id]
+	return BIOME_ROOM_COUNTS[level_id]
 
 ## The open Floodlights pitch has no walls — ring it with invisible collision
 ## so the player can't walk off the field into the void.
@@ -102,6 +109,7 @@ func _build_layout() -> void:
 		4: _layout_mall_atrium()
 		5: _layout_stairwell_spiral()
 		6: _layout_floodlights_pitch()
+	_trim_layout()
 
 func _add_cell(cell: Vector2i) -> void:
 	if not occupied.has(cell):

@@ -7,6 +7,9 @@ extends CharacterBody3D
 @export var snap_turn_degrees := 35.0
 @export var snap_turn_cooldown := 0.32
 @export var floor_y := 0.05
+@export var stick_deadzone := 0.18
+@export var stick_turn_threshold := 0.72
+@export var smooth_turn_speed := 0.0
 
 @onready var origin: XROrigin3D = $XROrigin3D
 @onready var camera: XRCamera3D = $XROrigin3D/XRCamera3D
@@ -33,7 +36,7 @@ func _physics_process(delta: float) -> void:
 		velocity = Vector3.ZERO
 		return
 	_turn_timer = maxf(0.0, _turn_timer - delta)
-	_handle_snap_turn()
+	_handle_turn(delta)
 	var input := _movement_input()
 	var forward := -camera.global_transform.basis.z
 	var right := camera.global_transform.basis.x
@@ -51,20 +54,29 @@ func _physics_process(delta: float) -> void:
 
 func _movement_input() -> Vector2:
 	var keyboard := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
-	var controller := _safe_controller_vector(left_controller, "primary")
-	if controller.length() < 0.08:
-		controller = _safe_controller_vector(left_controller, "thumbstick")
-	if controller.length() < 0.08:
-		controller = _safe_controller_vector(left_controller, "joystick")
-	return controller if controller.length() >= 0.08 else keyboard
+	var controller := _controller_vector(left_controller, true)
+	return controller if controller.length() >= stick_deadzone else keyboard
 
 func _turn_input() -> Vector2:
-	var value := _safe_controller_vector(right_controller, "primary")
-	if value.length() < 0.08:
-		value = _safe_controller_vector(right_controller, "thumbstick")
-	if value.length() < 0.08:
-		value = _safe_controller_vector(right_controller, "joystick")
-	return value
+	return _controller_vector(right_controller, false)
+
+func _controller_vector(controller: XRController3D, left_side: bool) -> Vector2:
+	var names := [
+		"primary",
+		"thumbstick",
+		"joystick",
+		"trackpad",
+		"primary_axis",
+		"ax_button",
+	]
+	for action_name in names:
+		var value := _safe_controller_vector(controller, action_name)
+		if value.length() >= stick_deadzone:
+			return _apply_deadzone(value)
+	var joy := _joypad_stick(left_side)
+	if joy.length() >= stick_deadzone:
+		return _apply_deadzone(joy)
+	return Vector2.ZERO
 
 func _safe_controller_vector(controller: XRController3D, action_name: String) -> Vector2:
 	if controller == null:
@@ -73,11 +85,36 @@ func _safe_controller_vector(controller: XRController3D, action_name: String) ->
 		return Vector2.ZERO
 	return controller.get_vector2(action_name)
 
-func _handle_snap_turn() -> void:
+func _joypad_stick(left_side: bool) -> Vector2:
+	var devices := Input.get_connected_joypads()
+	if devices.is_empty():
+		return Vector2.ZERO
+	var best := Vector2.ZERO
+	for device in devices:
+		var x := Input.get_joy_axis(device, JOY_AXIS_LEFT_X if left_side else JOY_AXIS_RIGHT_X)
+		var y := Input.get_joy_axis(device, JOY_AXIS_LEFT_Y if left_side else JOY_AXIS_RIGHT_Y)
+		var value := Vector2(x, y)
+		if value.length() > best.length():
+			best = value
+	return best
+
+func _apply_deadzone(value: Vector2) -> Vector2:
+	if value.length() < stick_deadzone:
+		return Vector2.ZERO
+	var strength := inverse_lerp(stick_deadzone, 1.0, minf(value.length(), 1.0))
+	return value.normalized() * strength
+
+func _handle_turn(delta: float) -> void:
+	var turn := _turn_input()
+	if smooth_turn_speed > 0.0 and absf(turn.x) >= stick_deadzone:
+		rotate_y(-turn.x * deg_to_rad(smooth_turn_speed) * delta)
+		return
+	_handle_snap_turn(turn)
+
+func _handle_snap_turn(turn: Vector2) -> void:
 	if _turn_timer > 0.0:
 		return
-	var turn := _turn_input()
-	if absf(turn.x) < 0.72:
+	if absf(turn.x) < stick_turn_threshold:
 		return
 	rotate_y(deg_to_rad(-snap_turn_degrees * signf(turn.x)))
 	_turn_timer = snap_turn_cooldown

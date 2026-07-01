@@ -3,8 +3,12 @@ extends Node
 
 @export var target_fps := 72
 @export var fallback_scene := "res://scenes/Main.tscn"
+@export var startup_retry_seconds := 8.0
+@export var retry_interval := 0.35
 
 var xr_interface: XRInterface
+var _startup_elapsed := 0.0
+var _xr_ready := false
 
 func _ready() -> void:
 	_configure_mobile_runtime()
@@ -18,15 +22,25 @@ func _configure_mobile_runtime() -> void:
 func _start_openxr() -> void:
 	xr_interface = XRServer.find_interface("OpenXR")
 	if xr_interface == null:
-		push_warning("OpenXR interface not found. Running non-XR fallback.")
+		push_warning("OpenXR interface not found yet. Retrying.")
+		_retry_or_continue()
 		return
 	if not xr_interface.is_initialized():
 		if not xr_interface.initialize():
-			push_error("OpenXR failed to initialize.")
+			push_warning("OpenXR initialize failed. Retrying.")
+			_retry_or_continue()
 			return
 	get_viewport().use_xr = true
 	get_viewport().transparent_bg = false
+	_xr_ready = true
 	print("Underworld Pico/OpenXR session started")
 
+func _retry_or_continue() -> void:
+	_startup_elapsed += retry_interval
+	if _startup_elapsed >= startup_retry_seconds:
+		push_warning("OpenXR did not initialize before timeout. Continuing scene without blocking.")
+		return
+	get_tree().create_timer(retry_interval).timeout.connect(_start_openxr)
+
 func is_xr_active() -> bool:
-	return xr_interface != null and xr_interface.is_initialized() and get_viewport().use_xr
+	return _xr_ready and xr_interface != null and xr_interface.is_initialized() and get_viewport().use_xr
